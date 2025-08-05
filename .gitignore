@@ -1,0 +1,6 @@
+.dart_tool/
+.pub/
+build/
+.idea/
+.vscode/
+lib/firebase_options.dart
