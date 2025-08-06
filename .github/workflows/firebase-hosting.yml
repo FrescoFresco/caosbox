@@ -1,4 +1,5 @@
 # .github/workflows/firebase-hosting.yml
+
 name: Deploy Flutter Web to Firebase Hosting
 
 on:
@@ -13,10 +14,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Flutter
+      - name: Set up Flutter (beta channel with Dart ≥ 3.2.0)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.14.0'
+          channel: beta
 
       - name: Install dependencies
         run: flutter pub get
