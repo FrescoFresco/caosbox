@@ -177,7 +177,7 @@ class AppState extends ChangeNotifier with FirestoreSync {
   }
 
   bool setStatus(String id, ItemStatus s) => _up(id, (it) => it.copyWith(status: s));
-  bool updateText(String id, String t) => _up(id, (it) => it.copyWith()..text);
+  bool updateText(String id, String t) => _up(id, (it) => it.copyWith());
 
   void toggleLink(String a, String b) {
     if (a == b || _cache[a] == null || _cache[b] == null) return;
@@ -222,20 +222,22 @@ class MyApp extends StatelessWidget {
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
   @override Widget build(BuildContext context) {
-    return StreamBuilder<User?>(stream: FirebaseAuth.instance.userChanges(), builder: (_,snap){
-      if (snap.connectionState==ConnectionState.waiting) {
-        return const Scaffold(body: Center(child:CircularProgressIndicator()));
+    return StreamBuilder<User?>(stream: FirebaseAuth.instance.userChanges(), builder: (_, snap) {
+      if (snap.connectionState == ConnectionState.waiting) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
       if (!snap.hasData) {
         return SignInScreen(
-          providers:[
+          providers: [
             EmailAuthProvider(),
-            GoogleProvider(clientId:'1087718443702-n9856kennjfbunkb0hc26gntrljhnsrs.apps.googleusercontent.com'),
+            GoogleProvider(clientId: '1087718443702-n9856kennjfbunkb0hc26gntrljhnsrs.apps.googleusercontent.com'),
           ],
-          actions:[
-            AuthStateChangeAction<SignedIn>((ctx,st){
-              Navigator.of(ctx).pushReplacement(MaterialPageRoute(builder:_=>const CaosBox()));
-            })
+          actions: [
+            AuthStateChangeAction<SignedIn>((ctx, state) {
+              Navigator.of(ctx).pushReplacement(
+                MaterialPageRoute(builder: (ctx) => const CaosBox())
+              );
+            }),
           ],
         );
       }
