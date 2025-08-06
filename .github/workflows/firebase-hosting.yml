@@ -1,3 +1,4 @@
+# .github/workflows/firebase-hosting.yml
 name: Build & Deploy Flutter Web
 
 on:
@@ -23,9 +24,10 @@ jobs:
       - name: Build web release
         run: flutter build web --release
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
       - name: Deploy to Firebase Hosting
-        uses: w9jds/firebase-action@v1
-        with:
-          args: deploy --only hosting
+        run: firebase deploy --only hosting --project caosbox-ef75b
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
