@@ -1,10 +1,11 @@
+// lib/src/widgets/links_block.dart
+
 import 'package:flutter/material.dart';
 import '../models/models.dart';
-
 import '../utils/filter_engine.dart';
 import 'chips_panel.dart';
 import 'item_card.dart';
-import 'info_modal.dart';    // <— showInfoModal
+import 'info_modal.dart';
 
 class LinksBlock extends StatefulWidget {
   final AppState st;
@@ -26,18 +27,18 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
   }
 
   Widget panel({required String t, required Widget chips, required Widget body}) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Align(alignment: Alignment.centerLeft, child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold))),
-          ),
-          Flexible(fit: FlexFit.loose, child: SingleChildScrollView(child: chips)),
-          const SizedBox(height: 8),
-          Expanded(child: body),
-        ]),
-      );
+    Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Align(alignment: Alignment.centerLeft, child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold))),
+        ),
+        Flexible(fit: FlexFit.loose, child: SingleChildScrollView(child: chips)),
+        const SizedBox(height: 8),
+        Expanded(child: body),
+      ]),
+    );
 
   @override
   bool get wantKeepAlive => true;
@@ -45,10 +46,10 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
   @override
   Widget build(BuildContext c) {
     super.build(c);
-    final st = widget.st;
-    final li = FilterEngine.apply(st.all, st, l);
+    final st   = widget.st;
+    final li   = FilterEngine.apply(st.all, st, l);
     final base = st.all.where((i) => i.id != sel).toList();
-    final ri = FilterEngine.apply(base, st, r);
+    final ri   = FilterEngine.apply(base, st, r);
 
     final lb = ListView.builder(
       itemCount: li.length,
@@ -68,24 +69,24 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
     );
 
     final rb = sel == null
-        ? const Center(child: Text('Selecciona un elemento'))
-        : ListView.builder(
-            itemCount: ri.length,
-            itemBuilder: (_, i) {
-              final it = ri[i];
-              final ck = st.links(sel!).contains(it.id);
-              return ItemCard(
-                it: it,
-                st: st,
-                ex: false,
-                onT: () {},
-                onLongInfo: () => showInfoModal(c, it, st),
-                cbR: true,
-                ck: ck,
-                onTapCb: () => setState(() => st.toggleLink(sel!, it.id)),
-              );
-            },
-          );
+      ? const Center(child: Text('Selecciona un elemento'))
+      : ListView.builder(
+          itemCount: ri.length,
+          itemBuilder: (_, i) {
+            final it = ri[i];
+            final ck = st.links(sel!).contains(it.id);
+            return ItemCard(
+              it: it,
+              st: st,
+              ex: false,
+              onT: () {},
+              onLongInfo: () => showInfoModal(c, it, st),
+              cbR: true,
+              ck: ck,
+              onTapCb: () => setState(() => st.toggleLink(sel!, it.id)),
+            );
+          },
+        );
 
     return Column(children: [
       const Padding(
@@ -93,19 +94,17 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
       ),
       Expanded(
-        child: OrientationBuilder(
-          builder: (ctx, o) => o == Orientation.portrait
-              ? Column(children: [
-                  Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)),
-                  const Divider(height: 1),
-                  Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb)),
-                ])
-              : Row(children: [
-                  Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb)),
-                ]),
-        ),
+        child: OrientationBuilder(builder: (ctx, o) => o == Orientation.portrait
+          ? Column(children: [
+              Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)),
+              const Divider(height: 1),
+              Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb)),
+            ])
+          : Row(children: [
+              Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)),
+              const VerticalDivider(width: 1),
+              Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb)),
+            ])),
       ),
     ]);
   }
