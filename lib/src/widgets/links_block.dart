@@ -1,26 +1,24 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart';     // AppState, Item, FilterSet, FilterEngine
-import 'chips_panel.dart';
+import 'package:caosbox/src/models/models.dart';  // Item, AppState, etc.
+import '../utils/filter_engine.dart';            // FilterSet, FilterEngine
 import 'item_card.dart';
-import 'info_modal.dart';           // showInfoModal
+import '../../main.dart' show Style, Behavior, showInfoModal;
 
 class LinksBlock extends StatefulWidget {
   final AppState st;
-  const LinksBlock({super.key, required this.st});
-
+  const LinksBlock({Key? key, required this.st}) : super(key: key);
   @override
   State<LinksBlock> createState() => _LinksBlockState();
 }
 
 class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
-  final FilterSet leftFilter = FilterSet();
-  final FilterSet rightFilter = FilterSet();
-  String? selected;
+  final FilterSet l = FilterSet(), r = FilterSet();
+  String? sel;
 
   @override
   void dispose() {
-    leftFilter.dispose();
-    rightFilter.dispose();
+    l.dispose();
+    r.dispose();
     super.dispose();
   }
 
@@ -46,13 +44,11 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
   bool get wantKeepAlive => true;
 
   @override
-  Widget build(BuildContext c) {
-    super.build(c);
+  Widget build(BuildContext context) {
     final st = widget.st;
-
-    final leftItems = FilterEngine.apply(st.all, st, leftFilter);
-    final other = st.all.where((i) => i.id != selected).toList();
-    final rightItems = FilterEngine.apply(other, st, rightFilter);
+    final leftItems = FilterEngine.apply(st.all, st, l);
+    final base = st.all.where((i) => i.id != sel).toList();
+    final rightItems = FilterEngine.apply(base, st, r);
 
     final leftList = ListView.builder(
       itemCount: leftItems.length,
@@ -63,31 +59,30 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
           st: st,
           ex: false,
           onT: () {},
-          onInfo: () => showInfoModal(c, it, st),
+          onInfo: () => showInfoModal(context, it, st),
           cbR: true,
-          ck: selected == it.id,
-          onTapCb: () => setState(() => selected = (selected == it.id ? null : it.id)),
+          ck: sel == it.id,
+          onTapCb: () => setState(() => sel = sel == it.id ? null : it.id),
         );
       },
     );
 
-    final rightList = selected == null
+    final rightList = sel == null
         ? const Center(child: Text('Selecciona un elemento'))
         : ListView.builder(
             itemCount: rightItems.length,
             itemBuilder: (_, i) {
               final it = rightItems[i];
-              final linked = st.links(selected!);
-              final ck = linked.contains(it.id);
+              final checked = st.links(sel!).contains(it.id);
               return ItemCard(
                 it: it,
                 st: st,
                 ex: false,
                 onT: () {},
-                onInfo: () => showInfoModal(c, it, st),
+                onInfo: () => showInfoModal(context, it, st),
                 cbR: true,
-                ck: ck,
-                onTapCb: () => setState(() => st.toggleLink(selected!, it.id)),
+                ck: checked,
+                onTapCb: () => setState(() => st.toggleLink(sel!, it.id)),
               );
             },
           );
@@ -98,21 +93,19 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       Expanded(
-        child: OrientationBuilder(builder: (ctx, o) {
-          if (o == Orientation.portrait) {
-            return Column(children: [
-              Expanded(child: panel(title: 'Seleccionar:', chips: ChipsPanel(set: leftFilter, onUpdate: () => setState(() {})), body: leftList)),
-              const Divider(height: 1),
-              Expanded(child: panel(title: 'Conectar con:', chips: ChipsPanel(set: rightFilter, onUpdate: () => setState(() {})), body: rightList)),
-            ]);
-          } else {
-            return Row(children: [
-              Expanded(child: panel(title: 'Seleccionar:', chips: ChipsPanel(set: leftFilter, onUpdate: () => setState(() {})), body: leftList)),
-              const VerticalDivider(width: 1),
-              Expanded(child: panel(title: 'Conectar con:', chips: ChipsPanel(set: rightFilter, onUpdate: () => setState(() {})), body: rightList)),
-            ]);
-          }
-        }),
+        child: OrientationBuilder(
+          builder: (ctx, orientation) => orientation == Orientation.portrait
+              ? Column(children: [
+                  Expanded(child: panel(title: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: leftList)),
+                  const Divider(height: 1),
+                  Expanded(child: panel(title: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rightList)),
+                ])
+              : Row(children: [
+                  Expanded(child: panel(title: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: leftList)),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: panel(title: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rightList)),
+                ]),
+        ),
       ),
     ]);
   }
