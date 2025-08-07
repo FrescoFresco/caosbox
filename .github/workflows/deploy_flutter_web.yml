@@ -1,0 +1,33 @@
+name: Build & Deploy Flutter Web
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️  Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐦 Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable          # 3.22.x (auto-update)
+          cache: true
+
+      - name: 📦 Pub get
+        run: flutter pub get
+
+      - name: 🏗️  Build web (release)
+        run: flutter build web --release
+
+      - name: 🚀 Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v1
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          channelId: live    # produce https://caosbox-ef75b.web.app
