@@ -1,10 +1,15 @@
-// lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'src/models/app_state.dart';
+import 'src/models/item.dart';
+import 'src/utils/filter_engine.dart';
+import 'src/utils/style.dart';
+import 'src/utils/behavior.dart';
 import 'src/widgets/quick_add.dart';
 import 'src/widgets/chips_panel.dart';
 import 'src/widgets/item_card.dart';
@@ -22,8 +27,14 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'CaosBox',
       theme: ThemeData(useMaterial3: true),
       home: const AuthGate(),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('es')],
     );
   }
 }
@@ -36,16 +47,20 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snap.hasData) {
           return SignInScreen(
             providers: [EmailAuthProvider()],
             actions: [
               AuthStateChangeAction<SignedIn>((ctx, state) {
-                Navigator.of(ctx).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const CaosBox()),
-                );
+                if (state is SignedIn) {
+                  Navigator.of(ctx).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const CaosBox()),
+                  );
+                }
               }),
             ],
           );
@@ -65,7 +80,7 @@ class CaosBox extends StatefulWidget {
 class _CaosBoxState extends State<CaosBox> {
   final st = AppState();
   @override
-  Widget build(BuildContext c) {
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: st,
       builder: (_, __) => DefaultTabController(
@@ -79,11 +94,16 @@ class _CaosBoxState extends State<CaosBox> {
               Tab(icon: Icon(Icons.link), text: 'Enlaces'),
             ]),
           ),
-          body: TabBarView(children: [
-            GenericScreen(type: ItemType.idea, st: st),
-            GenericScreen(type: ItemType.action, st: st),
-            LinksBlock(st: st),
-          ]),
+          body: SafeArea(
+            child: TabBarView(children: [
+              // Ideas
+              GenericScreen(type: ItemType.idea, st: st),
+              // Acciones
+              GenericScreen(type: ItemType.action, st: st),
+              // Enlaces
+              LinksBlock(st: st),
+            ]),
+          ),
         ),
       ),
     );
@@ -98,33 +118,40 @@ class GenericScreen extends StatefulWidget {
   State<GenericScreen> createState() => _GenericScreenState();
 }
 
-class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveClientMixin {
+class _GenericScreenState extends State<GenericScreen>
+    with AutomaticKeepAliveClientMixin {
   final _filter = FilterSet();
   final _expanded = <String>{};
-  final _ctrl = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    _filter.setDefaults(const {});
+  }
 
   @override
   void dispose() {
     _filter.dispose();
-    _ctrl.dispose();
     super.dispose();
   }
 
+  void _refresh() => setState(() {});
   @override
   bool get wantKeepAlive => true;
 
   @override
-  Widget build(BuildContext ctx) {
-    super.build(ctx);
-    final items = FilterEngine.apply(widget.st.items(widget.type), widget.st, _filter);
-    final cfg = widget.type == ItemType.idea ? ideasCfg : actionsCfg;
-
+  Widget build(BuildContext context) {
+    super.build(context);
+    final items = FilterEngine.apply(
+      widget.st.items(widget.type),
+      widget.st,
+      _filter,
+    );
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        QuickAdd(type: widget.type, st: widget.st),
+        QuickAdd(type: widget.type, st: widget.st, onAdded: _refresh),
         const SizedBox(height: 12),
-        ChipsPanel(set: _filter, onUpdate: () => setState(() {}), defaults: const {}),
+        ChipsPanel(set: _filter, onUpdate: _refresh),
         const SizedBox(height: 8),
         Expanded(
           child: ListView.builder(
@@ -135,10 +162,14 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
               return ItemCard(
                 it: it,
                 st: widget.st,
-                onTap: () {
-                  setState(() => open ? _expanded.remove(it.id) : _expanded.add(it.id));
+                ex: open,
+                onT: () {
+                  setState(() {
+                    if (open) _expanded.remove(it.id);
+                    else _expanded.add(it.id);
+                  });
                 },
-                onLongInfo: () => showInfoModal(ctx, it, widget.st),
+                onInfo: () => showInfoModal(context, it, widget.st),
               );
             },
           ),
