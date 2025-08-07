@@ -1,11 +1,13 @@
+// lib/src/widgets/item_card.dart
+
 import 'package:flutter/material.dart';
 import '../models/models.dart';
-
+import 'info_modal.dart';
 
 class ItemCard extends StatelessWidget {
   final Item it;
   final AppState st;
-  final bool ex;            // <-- PARAMETRO EX AGREGADO
+  final bool ex;
   final VoidCallback onT;
   final VoidCallback onLongInfo;
   final bool cbR;
@@ -16,17 +18,17 @@ class ItemCard extends StatelessWidget {
     Key? key,
     required this.it,
     required this.st,
-    this.ex = false,        // <-- valor por defecto
+    this.ex = false,
     required this.onT,
     required this.onLongInfo,
     this.cbR = false,
-    this.ck = false,
+    this.ck  = false,
     this.onTapCb,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext c) {
-    final m = st.statusIcons[it.status];
+    final m = Style.statusIcons[it.status];
     return Dismissible(
       key: Key('${it.id}-${it.status}'),
       confirmDismiss: (d) => Behavior.swipe(d, it.status, (s) => st.setStatus(it.id, s)),
@@ -53,9 +55,8 @@ class ItemCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   InkWell(
                     onTap: onT,
-                    child: Text(
-                      it.text,
-                      maxLines: ex ? null : 1,       // <-- usa el parámetro ex
+                    child: Text(it.text,
+                      maxLines: ex ? null : 1,
                       overflow: ex ? null : TextOverflow.ellipsis,
                       style: Style.content,
                     ),
