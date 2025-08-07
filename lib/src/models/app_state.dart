@@ -1,5 +1,4 @@
-// lib/src/models/app_state.dart
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'item.dart';
 
 class AppState extends ChangeNotifier {
@@ -27,8 +26,8 @@ class AppState extends ChangeNotifier {
     final v = text.trim();
     if (v.isEmpty) return;
     _cnt[t] = (_cnt[t] ?? 0) + 1;
-    final cfg = t == ItemType.idea ? ideasCfg : actionsCfg;
-    final id = '${cfg.prefix}${_cnt[t]!.toString().padLeft(3, '0')}';
+    final prefix = t == ItemType.idea ? 'B1' : 'B2';
+    final id = '$prefix${_cnt[t]!.toString().padLeft(3, '0')}';
     _items[t]!.insert(0, Item(id, v, t));
     _reindex();
     notifyListeners();
@@ -37,9 +36,10 @@ class AppState extends ChangeNotifier {
   bool _up(String id, Item Function(Item) ch) {
     final it = _cache[id];
     if (it == null) return false;
-    final L = _items[it.type]!, i = L.indexWhere((e) => e.id == id);
-    if (i < 0) return false;
-    L[i] = ch(it);
+    final L = _items[it.type]!;
+    final idx = L.indexWhere((e) => e.id == id);
+    if (idx < 0) return false;
+    L[idx] = ch(it);
     _reindex();
     notifyListeners();
     return true;
@@ -47,17 +47,19 @@ class AppState extends ChangeNotifier {
 
   bool setStatus(String id, ItemStatus s) =>
       _up(id, (it) => it.copyWith(status: s));
-  bool updateText(String id, String t) =>
-      _up(id, (it) => Item(it.id, t, it.type, it.status, it.createdAt,
-          DateTime.now(), it.statusChanges));
+
+  bool updateText(String id, String t) => _up(
+        id,
+        (it) => Item(it.id, t, it.type, it.status, it.createdAt,
+            DateTime.now(), it.statusChanges),
+      );
 
   void toggleLink(String a, String b) {
     if (a == b || _cache[a] == null || _cache[b] == null) return;
     final sa = _links.putIfAbsent(a, () => <String>{});
     final sb = _links.putIfAbsent(b, () => <String>{});
-    if (sa.remove(b)) {
-      sb.remove(a);
-    } else {
+    if (sa.remove(b)) sb.remove(a);
+    else {
       sa.add(b);
       sb.add(a);
     }
@@ -67,6 +69,6 @@ class AppState extends ChangeNotifier {
   void _reindex() {
     _cache
       ..clear()
-      ..addAll({for (final it in all) it.id: it});
+      ..addAll({for (var it in all) it.id: it});
   }
 }
