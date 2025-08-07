@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:caosbox/main.dart' show AppState, Item;  // <— importa tu Estado y Modelo
+import '../models/models.dart';
+
 
 class InfoModal extends StatefulWidget {
   final String id;
