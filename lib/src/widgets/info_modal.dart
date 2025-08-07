@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-// Unifica Item y AppState desde tu único fichero de modelos
-import '../models/models.dart';
+import 'package:caosbox/main.dart' show AppState, Item;  // <— importa tu Estado y Modelo
 
 class InfoModal extends StatefulWidget {
   final String id;
@@ -47,72 +45,65 @@ class _InfoModalState extends State<InfoModal> {
         length: 4,
         child: Scaffold(
           appBar: AppBar(title: Text('Detalle • ${cur.id}')),
-          body: Column(
-            children: [
-              const TabBar(tabs: [
-                Tab(text: 'Contenido'),
-                Tab(text: 'Relacionado'),
-                Tab(text: 'Info'),
-                Tab(text: 'Notas'),
+          body: Column(children: [
+            const TabBar(tabs: [
+              Tab(text: 'Contenido'),
+              Tab(text: 'Relacionado'),
+              Tab(text: 'Info'),
+              Tab(text: 'Notas'),
+            ]),
+            Expanded(
+              child: TabBarView(children: [
+                // Contenido
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    controller: _ed,
+                    maxLines: null,
+                    onChanged: (t) {
+                      _deb?.cancel();
+                      _deb = Timer(const Duration(milliseconds: 250), () {
+                        widget.st.updateText(cur.id, t);
+                      });
+                    },
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                  ),
+                ),
+                // Relacionado
+                Center(child: Text('Aquí irían los ítems relacionados')),
+                // Info
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(children: [
+                    _infoRow('Tipo', cur.type.name),
+                    _infoRow('Creado', fmt.format(cur.createdAt)),
+                    _infoRow('Modificado', fmt.format(cur.modifiedAt)),
+                    _infoRow('Estado', cur.status.name),
+                    _infoRow('Cambios', '${cur.statusChanges}'),
+                    _infoRow('Relaciones', '${widget.st.links(cur.id).length}'),
+                  ]),
+                ),
+                // Notas
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: TextField(
+                    controller: _note,
+                    maxLines: null,
+                    onChanged: (t) {
+                      _debN?.cancel();
+                      _debN = Timer(const Duration(milliseconds: 250), () {
+                        widget.st.setNote(cur.id, t);
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Escribe tus notas aquí…',
+                    ),
+                  ),
+                ),
               ]),
-              Expanded(
-                child: TabBarView(children: [
-                  // Contenido
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextField(
-                      controller: _ed,
-                      maxLines: null,
-                      onChanged: (t) {
-                        _deb?.cancel();
-                        _deb = Timer(const Duration(milliseconds: 250), () {
-                          widget.st.updateText(cur.id, t);
-                        });
-                      },
-                      decoration: const InputDecoration(border: OutlineInputBorder()),
-                    ),
-                  ),
-
-                  // Relacionado
-                  Center(child: Text('Aquí irían los ítems relacionados')),
-
-                  // Info
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        _infoRow('Tipo', cur.type.name),
-                        _infoRow('Creado', fmt.format(cur.createdAt)),
-                        _infoRow('Modificado', fmt.format(cur.modifiedAt)),
-                        _infoRow('Estado', cur.status.name),
-                        _infoRow('Cambios', '${cur.statusChanges}'),
-                        _infoRow('Relaciones', '${widget.st.links(cur.id).length}'),
-                      ],
-                    ),
-                  ),
-
-                  // Notas
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TextField(
-                      controller: _note,
-                      maxLines: null,
-                      onChanged: (t) {
-                        _debN?.cancel();
-                        _debN = Timer(const Duration(milliseconds: 250), () {
-                          widget.st.setNote(cur.id, t);
-                        });
-                      },
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Escribe tus notas aquí…',
-                      ),
-                    ),
-                  ),
-                ]),
-              ),
-            ],
-          ),
+            ),
+          ]),
         ),
       ),
     );
@@ -121,17 +112,15 @@ class _InfoModalState extends State<InfoModal> {
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
-          Expanded(child: Text(value)),
-        ],
-      ),
+      child: Row(children: [
+        SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
+        Expanded(child: Text(value)),
+      ]),
     );
   }
 }
 
-/// Lanza la modal con los detalles del ítem
+/// Helper global para mostrar esta modal desde cualquier parte
 void showInfoModal(BuildContext ctx, Item it, AppState st) {
   showModalBottomSheet(
     context: ctx,
