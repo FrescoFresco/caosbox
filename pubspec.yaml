@@ -13,8 +13,11 @@ dependencies:
   firebase_core: ^3.15.2
   firebase_auth: ^5.7.0
   cloud_firestore: ^5.6.12
-  firebase_ui_auth: ^2.5.0
-  firebase_ui_oauth_google: ^1.4.3
+
+  # UI Auth
+  firebase_ui_auth: ^3.0.0     # ajustado a la versión válida en pub.dev
+  firebase_ui_oauth_google: ^2.0.0  # la última para Google OAuth
+
 
 dev_dependencies:
   flutter_test:
