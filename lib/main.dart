@@ -1,14 +1,11 @@
 // lib/main.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:async';
-
-// Import de la modal para detalles
-import 'src/widgets/info_modal.dart';
 
 import 'src/models/models.dart';
 import 'src/utils/filter_engine.dart';
@@ -16,7 +13,8 @@ import 'src/widgets/quick_add.dart';
 import 'src/widgets/chips_panel.dart';
 import 'src/widgets/item_card.dart';
 import 'src/widgets/links_block.dart';
-import 'src/widgets/info_modal.dart';
+import 'src/widgets/info_modal.dart';  // <-- Solo una vez
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
