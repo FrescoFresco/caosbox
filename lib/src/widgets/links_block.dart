@@ -1,154 +1,108 @@
-// lib/src/widgets/links_block.dart
-
 import 'package:flutter/material.dart';
 import '../models/models.dart';
-import '../../main.dart';                 // AppState, showInfoModal
 import '../utils/filter_engine.dart';
-import 'item_card.dart';
 import 'chips_panel.dart';
-import 'info_modal.dart';
+import 'item_card.dart';
+import 'info_modal.dart';  // <-- Añadido para showInfoModal
 
 class LinksBlock extends StatefulWidget {
   final AppState st;
-  const LinksBlock({super.key, required this.st});
+  const LinksBlock({Key? key, required this.st}) : super(key: key);
 
   @override
   State<LinksBlock> createState() => _LinksBlockState();
 }
 
 class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
-  final leftFilter = FilterSet(), rightFilter = FilterSet();
-  String? selectedId;
+  final l = FilterSet(), r = FilterSet();
+  String? sel;
 
   @override
   void dispose() {
-    leftFilter.dispose();
-    rightFilter.dispose();
+    l.dispose();
+    r.dispose();
     super.dispose();
   }
 
-  Widget panel({required String title, required Widget chips, required Widget body}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Align(alignment: Alignment.centerLeft, child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
+  Widget panel({required String t, required Widget chips, required Widget body}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+            Flexible(fit: FlexFit.loose, child: SingleChildScrollView(child: chips)),
+            const SizedBox(height: 8),
+            Expanded(child: body),
+          ],
         ),
-        Flexible(fit: FlexFit.loose, child: SingleChildScrollView(child: chips)),
-        const SizedBox(height: 8),
-        Expanded(child: body),
-      ]),
-    );
-  }
+      );
 
   @override
   bool get wantKeepAlive => true;
 
   @override
-  Widget build(BuildContext context) {
-    super.build(context);
+  Widget build(BuildContext c) {
+    super.build(c);
     final st = widget.st;
-    final allExceptSelected = st.all.where((i) => i.id != selectedId).toList();
-    final leftList = FilterEngine.apply(st.all, st, leftFilter);
-    final rightListWidget = selectedId == null
+    final li = FilterEngine.apply(st.all, st, l);
+    final base = st.all.where((i) => i.id != sel).toList();
+    final ri = FilterEngine.apply(base, st, r);
+
+    final lb = ListView.builder(
+      itemCount: li.length,
+      itemBuilder: (_, i) {
+        final it = li[i];
+        return ItemCard(
+          it: it,
+          st: st,
+          ex: false,
+          onLongInfo: () => showInfoModal(c, it, st),
+          cbR: true,
+          ck: sel == it.id,
+          onTapCb: () => setState(() => sel = sel == it.id ? null : it.id),
+        );
+      },
+    );
+
+    final rb = sel == null
         ? const Center(child: Text('Selecciona un elemento'))
         : ListView.builder(
-            itemCount: FilterEngine.apply(allExceptSelected, st, rightFilter).length,
+            itemCount: ri.length,
             itemBuilder: (_, i) {
-              final it = FilterEngine.apply(allExceptSelected, st, rightFilter)[i];
-              final ck = st.links(selectedId!).contains(it.id);
+              final it = ri[i];
+              final ck = st.links(sel!).contains(it.id);
               return ItemCard(
                 it: it,
                 st: st,
-                expanded: false,
-                onTapTitle: () {},
-                onLongInfo: () => showInfoModal(context, it, st),
-                cbRight: true,
-                checked: ck,
-                onToggleLink: () => setState(() => st.toggleLink(selectedId!, it.id)),
+                ex: false,
+                onLongInfo: () => showInfoModal(c, it, st),
+                cbR: true,
+                ck: ck,
+                onTapCb: () => setState(() => st.toggleLink(sel!, it.id)),
               );
             },
           );
 
-    return Column(children: [
-      const Padding(
-        padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
-        child: Text('Conectar elementos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ),
-      Expanded(
-        child: OrientationBuilder(builder: (ctx, ori) {
-          if (ori == Orientation.portrait) {
-            return Column(children: [
-              Expanded(
-                child: panel(
-                  title: 'Seleccionar:',
-                  chips: ChipsPanel(set: leftFilter, onUpdate: () => setState(() {})),
-                  body: ListView.builder(
-                    itemCount: leftList.length,
-                    itemBuilder: (_, i) {
-                      final it = leftList[i];
-                      final sel = selectedId == it.id;
-                      return ItemCard(
-                        it: it,
-                        st: st,
-                        expanded: false,
-                        onTapTitle: () => setState(() => selectedId = sel ? null : it.id),
-                        onLongInfo: () => showInfoModal(context, it, st),
-                        cbRight: true,
-                        checked: sel,
-                        onToggleLink: () => setState(() => selectedId = sel ? null : it.id),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: panel(
-                  title: 'Conectar con:',
-                  chips: ChipsPanel(set: rightFilter, onUpdate: () => setState(() {})),
-                  body: rightListWidget,
-                ),
-              ),
-            ]);
-          } else {
-            return Row(children: [
-              Expanded(
-                child: panel(
-                  title: 'Seleccionar:',
-                  chips: ChipsPanel(set: leftFilter, onUpdate: () => setState(() {})),
-                  body: ListView.builder(
-                    itemCount: leftList.length,
-                    itemBuilder: (_, i) {
-                      final it = leftList[i];
-                      final sel = selectedId == it.id;
-                      return ItemCard(
-                        it: it,
-                        st: st,
-                        expanded: false,
-                        onTapTitle: () => setState(() => selectedId = sel ? null : it.id),
-                        onLongInfo: () => showInfoModal(context, it, st),
-                        cbRight: true,
-                        checked: sel,
-                        onToggleLink: () => setState(() => selectedId = sel ? null : it.id),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: panel(
-                  title: 'Conectar con:',
-                  chips: ChipsPanel(set: rightFilter, onUpdate: () => setState(() {})),
-                  body: rightListWidget,
-                ),
-              ),
-            ]);
-          }
-        }),
-      ),
-    ]);
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        ),
+        Expanded(
+          child: OrientationBuilder(
+            builder: (ctx, o) => o == Orientation.portrait
+                ? Column(children: [Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)), const Divider(height: 1), Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb))])
+                : Row(children: [Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)), const VerticalDivider(width: 1), Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb))]),
+          ),
+        ),
+      ],
+    );
   }
 }
