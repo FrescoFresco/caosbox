@@ -1,21 +1,28 @@
 name: caosbox
-description: CaosBox web app for ideas & actions
+description: CaosBox – Flutter web app with Firebase
 publish_to: 'none'
-version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ">=3.2.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^3.25.0
-  firebase_auth: ^4.6.0
-  firebase_ui_auth: ^2.4.0
+
+  firebase_core: ^4.0.0
+  firebase_auth: ^6.0.0
+  firebase_ui_auth: ^3.0.0
+  firebase_ui_oauth_google: ^2.0.0
+  cloud_firestore: ^5.6.12
+
+  # UI
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
