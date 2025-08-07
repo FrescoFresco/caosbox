@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:caosbox/main.dart' show AppState, Item; // importa tu modelo central
+import '../models/models.dart';
+
 
 class ItemCard extends StatelessWidget {
   final Item it;
