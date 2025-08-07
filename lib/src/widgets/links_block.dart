@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart';
+import 'package:caosbox/main.dart' show AppState, Item;  // <— importa tu Estado y Modelo
 import '../utils/filter_engine.dart';
 import 'chips_panel.dart';
 import 'item_card.dart';
-import 'info_modal.dart';  // <-- Añadido para showInfoModal
+import 'info_modal.dart';    // <— showInfoModal
 
 class LinksBlock extends StatefulWidget {
   final AppState st;
@@ -27,20 +27,15 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
   Widget panel({required String t, required Widget chips, required Widget body}) =>
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-            Flexible(fit: FlexFit.loose, child: SingleChildScrollView(child: chips)),
-            const SizedBox(height: 8),
-            Expanded(child: body),
-          ],
-        ),
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Align(alignment: Alignment.centerLeft, child: Text(t, style: const TextStyle(fontWeight: FontWeight.bold))),
+          ),
+          Flexible(fit: FlexFit.loose, child: SingleChildScrollView(child: chips)),
+          const SizedBox(height: 8),
+          Expanded(child: body),
+        ]),
       );
 
   @override
@@ -62,6 +57,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
           it: it,
           st: st,
           ex: false,
+          onT: () {},
           onLongInfo: () => showInfoModal(c, it, st),
           cbR: true,
           ck: sel == it.id,
@@ -81,6 +77,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
                 it: it,
                 st: st,
                 ex: false,
+                onT: () {},
                 onLongInfo: () => showInfoModal(c, it, st),
                 cbR: true,
                 ck: ck,
@@ -89,20 +86,26 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
             },
           );
 
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
-          child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+    return Column(children: [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
+        child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+      ),
+      Expanded(
+        child: OrientationBuilder(
+          builder: (ctx, o) => o == Orientation.portrait
+              ? Column(children: [
+                  Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)),
+                  const Divider(height: 1),
+                  Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb)),
+                ])
+              : Row(children: [
+                  Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb)),
+                ]),
         ),
-        Expanded(
-          child: OrientationBuilder(
-            builder: (ctx, o) => o == Orientation.portrait
-                ? Column(children: [Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)), const Divider(height: 1), Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb))])
-                : Row(children: [Expanded(child: panel(t: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: () => setState(() {})), body: lb)), const VerticalDivider(width: 1), Expanded(child: panel(t: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: () => setState(() {})), body: rb))]),
-          ),
-        ),
-      ],
-    );
+      ),
+    ]);
   }
 }
