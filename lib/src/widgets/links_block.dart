@@ -1,12 +1,19 @@
+// lib/src/widgets/links_block.dart
+//
+// Pantalla para enlazar dos ítems entre sí (bidireccional).
+// Requiere:
+//   • AppState, Item, ItemType…   →  lib/src/models/models.dart
+//   • FilterSet / FilterEngine    →  lib/src/utils/filter_engine.dart
+//   • ChipsPanel, ItemCard, InfoModal
+
 import 'package:flutter/material.dart';
 
-import '../../src/models/models.dart' as models;
-import '../../src/utils/filter_engine.dart' as utils;
+import '../models/models.dart'           as models; // AppState, FilterSet…
+import '../utils/filter_engine.dart'     as utils;  // FilterEngine
 import 'chips_panel.dart';
 import 'item_card.dart';
 import 'info_modal.dart';
 
-/// Bloque para conectar dos ítems entre sí (bidireccional).
 class LinksBlock extends StatefulWidget {
   final models.AppState st;
   const LinksBlock({super.key, required this.st});
@@ -17,9 +24,11 @@ class LinksBlock extends StatefulWidget {
 
 class _LinksBlockState extends State<LinksBlock>
     with AutomaticKeepAliveClientMixin {
-  final l = models.FilterSet();
-  final r = models.FilterSet();
-  String? sel; // id seleccionado a la izquierda
+  // Filtros independientes para cada lista
+  final lFilter = models.FilterSet();
+  final rFilter = models.FilterSet();
+
+  String? selectedId; // id elegido en la lista izquierda
 
   void _refresh() => setState(() {});
 
@@ -31,10 +40,13 @@ class _LinksBlockState extends State<LinksBlock>
     super.build(context);
     final st = widget.st;
 
-    final leftItems  = utils.FilterEngine.apply(st.all, st, l);
-    final rightBase  = st.all.where((i) => i.id != sel).toList();
-    final rightItems = utils.FilterEngine.apply(rightBase, st, r);
+    // --------- datos filtrados ----------
+    final leftItems  = utils.FilterEngine.apply(st.all, st, lFilter);
 
+    final rightBase  = st.all.where((e) => e.id != selectedId).toList();
+    final rightItems = utils.FilterEngine.apply(rightBase, st, rFilter);
+
+    // ---------- helper visual ----------
     Widget panel({
       required String title,
       required Widget chips,
@@ -55,7 +67,7 @@ class _LinksBlockState extends State<LinksBlock>
           ]),
         );
 
-    // Listas
+    // ---------- lista izquierda ----------
     final leftList = ListView.builder(
       itemCount: leftItems.length,
       itemBuilder: (_, i) {
@@ -67,19 +79,21 @@ class _LinksBlockState extends State<LinksBlock>
           onTap: () {},
           onLongTap: () => showInfoModal(context, it, st),
           checkboxRight: true,
-          checked: sel == it.id,
-          onCheckbox: () => setState(() => sel = sel == it.id ? null : it.id),
+          checked: selectedId == it.id,
+          onCheckbox: () => setState(() =>
+              selectedId = selectedId == it.id ? null : it.id),
         );
       },
     );
 
-    final rightList = sel == null
+    // ---------- lista derecha ----------
+    final rightList = selectedId == null
         ? const Center(child: Text('Selecciona un elemento'))
         : ListView.builder(
             itemCount: rightItems.length,
             itemBuilder: (_, i) {
               final it = rightItems[i];
-              final linked = st.links(sel!).contains(it.id);
+              final linked = st.links(selectedId!).contains(it.id);
               return ItemCard(
                 it: it,
                 st: st,
@@ -89,29 +103,47 @@ class _LinksBlockState extends State<LinksBlock>
                 checkboxRight: true,
                 checked: linked,
                 onCheckbox: () =>
-                    setState(() => st.toggleLink(sel!, it.id)),
+                    setState(() => st.toggleLink(selectedId!, it.id)),
               );
             },
           );
 
+    // ---------- layout portrait / landscape ----------
     return Column(children: [
       const Padding(
         padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
-        child: Text('Conectar elementos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        child: Text('Conectar elementos',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
       Expanded(
         child: OrientationBuilder(builder: (ctx, ori) {
-          final isPortrait = ori == Orientation.portrait;
-          return isPortrait
+          final portrait = ori == Orientation.portrait;
+          return portrait
               ? Column(children: [
-                  Expanded(child: panel(title: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: _refresh), body: leftList)),
+                  Expanded(
+                      child: panel(
+                          title: 'Seleccionar:',
+                          chips: ChipsPanel(set: lFilter, onUpdate: _refresh),
+                          body: leftList)),
                   const Divider(height: 1),
-                  Expanded(child: panel(title: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: _refresh), body: rightList)),
+                  Expanded(
+                      child: panel(
+                          title: 'Conectar con:',
+                          chips: ChipsPanel(set: rFilter, onUpdate: _refresh),
+                          body: rightList)),
                 ])
               : Row(children: [
-                  Expanded(child: panel(title: 'Seleccionar:', chips: ChipsPanel(set: l, onUpdate: _refresh), body: leftList)),
+                  Expanded(
+                      child: panel(
+                          title: 'Seleccionar:',
+                          chips: ChipsPanel(set: lFilter, onUpdate: _refresh),
+                          body: leftList)),
                   const VerticalDivider(width: 1),
-                  Expanded(child: panel(title: 'Conectar con:', chips: ChipsPanel(set: r, onUpdate: _refresh), body: rightList)),
+                  Expanded(
+                      child: panel(
+                          title: 'Conectar con:',
+                          chips: ChipsPanel(set: rFilter, onUpdate: _refresh),
+                          body: rightList)),
                 ]);
         }),
       ),
