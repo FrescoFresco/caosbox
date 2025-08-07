@@ -1,42 +1,28 @@
-name: Build & Deploy Flutter Web
+name: caosbox
+description: Gestor de ideas y acciones en Flutter Web
+version: 1.0.0+1
 
-on:
-  push:
-    branches: [ main ]       # ajusta si tu rama principal se llama distinto
-  workflow_dispatch:         # permite lanzarlo manualmente
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.16.0"
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^4.3.2
+  firebase_auth: ^6.1.1
+  cloud_firestore: ^4.15.6
+  firebase_ui_auth: ^3.0.0
+  firebase_ui_oauth_google: ^2.0.0
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.7
 
-    steps:
-      # 1. Checkout código
-      - name: Checkout
-        uses: actions/checkout@v4
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
 
-      # 2. Instalar Flutter estable
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable          # siempre la última estable
-          cache: true
-
-      # 3. Obtener dependencias
-      - name: Flutter pub get
-        run: flutter pub get
-
-      # 4. Compilar para Web (carpeta build/web)
-        #  --base-href=/  asegura rutas relativas correctas en Firebase Hosting
-      - name: Build Flutter Web
-        run: flutter build web --release --base-href=/
-
-      # 5. Desplegar a Firebase Hosting
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0   #  ← versión estable disponible
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}          # token de GitHub para PR comments, etc.
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}  # JSON de la cuenta de servicio
-          channelId: live
-          projectId: caosbox-ef75b
-          target: default           # o el target que hayas definido en firebase.json
-          entryPoint: build/web     # carpeta generada por flutter build web
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
