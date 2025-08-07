@@ -1,3 +1,5 @@
+# pubspec.yaml
+
 name: caosbox
 description: Organiza ideas y acciones
 publish_to: 'none'
@@ -10,11 +12,12 @@ dependencies:
   flutter:
     sdk: flutter
 
-  firebase_core: ^3.15.2
+  # Firebase core bumped to v4 for Firebase UI compatibility
+  firebase_core: ^4.0.0
   firebase_auth: ^6.0.0
   cloud_firestore: ^5.6.12
 
-  # Firebase UI Auth
+  # Firebase UI
   firebase_ui_auth: ^3.0.0
   firebase_ui_oauth_google: ^2.0.0
 
