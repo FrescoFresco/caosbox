@@ -1,6 +1,1 @@
-// .firebaserc
-{
-  "projects": {
-    "default": "caosbox-ef75b"
-  }
-}
+{ "projects": { "default": "caosbox-ef75b" } }
