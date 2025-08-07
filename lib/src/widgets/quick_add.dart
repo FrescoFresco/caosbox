@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart'; // Importa ItemTypeCfg, ItemType y AppState
+import '../../src/models/models.dart' as models; // importa ItemTypeCfg y demás
+import '../../src/models/models.dart' show ItemType; // para ItemType
+import '../../src/app_state.dart'; // si AppState está en otro fichero, corrige la ruta
+// Si AppState está en models.dart, usa:
+// import '../../src/models/models.dart' show AppState;
 
 class QuickAdd extends StatefulWidget {
   final ItemType type;
-  final AppState st;
+  final models.AppState st;
 
   const QuickAdd({super.key, required this.type, required this.st});
 
@@ -16,52 +20,35 @@ class _QuickAddState extends State<QuickAdd> {
 
   @override
   Widget build(BuildContext context) {
-    // Configuración según tipo
-    final cfg = widget.type == ItemType.idea
-        ? ItemTypeCfg(
-            prefix: 'B1',
-            icon: Icons.lightbulb,
-            label: 'Ideas',
-            hint: 'Escribe tu idea…',
-          )
-        : ItemTypeCfg(
-            prefix: 'B2',
-            icon: Icons.assignment,
-            label: 'Acciones',
-            hint: 'Describe la acción…',
-          );
-
+    final cfg = widget.type == ItemType.idea ? ideasCfg : actionsCfg;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(cfg.icon),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: cfg.hint,
-                  border: InputBorder.none,
-                  isDense: true,
-                ),
-                onSubmitted: _submit,
+        child: Row(children: [
+          Icon(cfg.icon),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: cfg.hint,
+                border: InputBorder.none,
+                isDense: true,
               ),
+              onSubmitted: (_) => _submit(),
             ),
-            IconButton(icon: const Icon(Icons.add), onPressed: _submit),
-          ],
-        ),
+          ),
+          IconButton(icon: const Icon(Icons.add), onPressed: _submit),
+        ]),
       ),
     );
   }
 
-  void _submit([String? _]) {
+  void _submit() {
     final text = _controller.text.trim();
-    if (text.isNotEmpty) {
-      widget.st.add(widget.type, text);
-      _controller.clear();
-    }
+    if (text.isEmpty) return;
+    widget.st.add(widget.type, text);
+    _controller.clear();
   }
 
   @override
