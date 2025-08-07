@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:caosbox/main.dart' show AppState, Item;  // <— importa tu Estado y Modelo
+import '../models/models.dart';
+
 import '../utils/filter_engine.dart';
 import 'chips_panel.dart';
 import 'item_card.dart';
