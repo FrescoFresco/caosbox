@@ -2,35 +2,41 @@ name: Build & Deploy Flutter Web
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]       # ajusta si tu rama principal se llama distinto
+  workflow_dispatch:         # permite lanzarlo manualmente
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+      # 1. Checkout código
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      # 2. Instalar Flutter estable
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
-          channel: "stable"
+          channel: stable          # siempre la última estable
+          cache: true
 
-      - name: Install deps
+      # 3. Obtener dependencias
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build web (base href "/")
+      # 4. Compilar para Web (carpeta build/web)
+        #  --base-href=/  asegura rutas relativas correctas en Firebase Hosting
+      - name: Build Flutter Web
         run: flutter build web --release --base-href=/
 
-      # 🔐  autentica con tu Service Account JSON almacenada en el secret
-      - name: Auth to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
+      # 5. Desplegar a Firebase Hosting
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v2
+        uses: FirebaseExtended/action-hosting-deploy@v0   #  ← versión estable disponible
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          projectId: caosbox-ef75b        # <-- tu ID de proyecto
-          channelId: live                 # publica en producción
-          target: default
-          entryPoint: build/web
+          repoToken: ${{ secrets.GITHUB_TOKEN }}          # token de GitHub para PR comments, etc.
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}  # JSON de la cuenta de servicio
+          channelId: live
+          projectId: caosbox-ef75b
+          target: default           # o el target que hayas definido en firebase.json
+          entryPoint: build/web     # carpeta generada por flutter build web
