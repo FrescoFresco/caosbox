@@ -1,3 +1,5 @@
+# .github/workflows/firebase-hosting.yml
+
 name: Build & Deploy Flutter Web
 
 on:
@@ -12,10 +14,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Flutter 4.x
+      - name: Setup Flutter (latest stable)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '4.0.0'
           channel: stable
 
       - name: Install dependencies
