@@ -1,4 +1,4 @@
-// lib/src/utils/filter_engine.dart
+import 'package:flutter/widgets.dart';
 import '../models/app_state.dart';
 import '../models/item.dart';
 
@@ -7,25 +7,26 @@ enum FilterKey { completed, archived, hasLinks }
 
 class FilterSet {
   final text = TextEditingController();
-  final Map<FilterKey, FilterMode> modes = {
+  final modes = <FilterKey, FilterMode>{
     FilterKey.completed: FilterMode.off,
     FilterKey.archived: FilterMode.off,
-    FilterKey.hasLinks: FilterMode.off
+    FilterKey.hasLinks: FilterMode.off,
   };
-  void dispose() => text.dispose();
+
   void setDefaults(Map<FilterKey, FilterMode> d) {
     clear();
     d.forEach((k, v) => modes[k] = v);
   }
 
-  void cycle(FilterKey k) {
-    modes[k] = FilterMode.values[(modes[k]!.index + 1) % 3];
-  }
+  void cycle(FilterKey k) =>
+      modes[k] = FilterMode.values[(modes[k]!.index + 1) % 3];
 
   void clear() {
     text.clear();
-    for (final k in modes.keys) modes[k] = FilterMode.off;
+    for (var k in modes.keys) modes[k] = FilterMode.off;
   }
+
+  void dispose() => text.dispose();
 
   bool get hasActive =>
       text.text.isNotEmpty || modes.values.any((m) => m != FilterMode.off);
@@ -35,7 +36,7 @@ class FilterEngine {
   static bool _pass(FilterMode m, bool v) => switch (m) {
         FilterMode.off => true,
         FilterMode.include => v,
-        FilterMode.exclude => !v
+        FilterMode.exclude => !v,
       };
 
   static List<Item> apply(
@@ -43,7 +44,8 @@ class FilterEngine {
     final q = set.text.text.toLowerCase();
     final hasQ = q.isNotEmpty;
     return items.where((it) {
-      if (hasQ && !'${it.id} ${it.text}'.toLowerCase().contains(q)) {
+      if (hasQ &&
+          !'${it.id} ${it.text}'.toLowerCase().contains(q)) {
         return false;
       }
       return _pass(set.modes[FilterKey.completed]!, it.status == ItemStatus.completed) &&
