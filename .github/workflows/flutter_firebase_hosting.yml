@@ -1,0 +1,39 @@
+name: Build & Deploy Flutter Web to Firebase Hosting
+
+on:
+  push:
+    branches: [ main ]          # Despliega solo cuando haces push a main
+  workflow_dispatch:            # Botón “Run workflow” manual
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1) checkout
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+    # 2) set-up Flutter (último stable)
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+    # 3) dependencias
+      - name: flutter pub get
+        run: flutter pub get
+
+    # 4) build web (–base-href=/ hace que funcione en dominio raíz)
+      - name: Build Flutter web
+        run: flutter build web --release --base-href=/
+
+    # 5) deploy a Firebase Hosting (acción oficial mantenida)
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0.9.0
+        with:
+          repoToken:              ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SA }}   # ←  tu JSON completo en secrets
+          projectId:              caosbox-ef75b
+          channelId:              live          # “live” = producción
+          public:                 build/web     # carpeta que acaba de generar Flutter
