@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';  // Para formatear fechas
+import 'package:intl/intl.dart';
 
-import '../models/item.dart';
-import '../models/app_state.dart';
+// Unifica Item y AppState desde tu único fichero de modelos
+import '../models/models.dart';
 
 class InfoModal extends StatefulWidget {
   final String id;
@@ -46,12 +46,10 @@ class _InfoModalState extends State<InfoModal> {
       child: DefaultTabController(
         length: 4,
         child: Scaffold(
-          appBar: AppBar(
-            title: Text('Detalle • ${cur.id}'),
-          ),
+          appBar: AppBar(title: Text('Detalle • ${cur.id}')),
           body: Column(
             children: [
-              TabBar(tabs: const [
+              const TabBar(tabs: [
                 Tab(text: 'Contenido'),
                 Tab(text: 'Relacionado'),
                 Tab(text: 'Info'),
@@ -71,13 +69,13 @@ class _InfoModalState extends State<InfoModal> {
                           widget.st.updateText(cur.id, t);
                         });
                       },
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: const InputDecoration(border: OutlineInputBorder()),
                     ),
                   ),
+
                   // Relacionado
                   Center(child: Text('Aquí irían los ítems relacionados')),
+
                   // Info
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -92,6 +90,7 @@ class _InfoModalState extends State<InfoModal> {
                       ],
                     ),
                   ),
+
                   // Notas
                   Padding(
                     padding: const EdgeInsets.all(16),
@@ -130,4 +129,14 @@ class _InfoModalState extends State<InfoModal> {
       ),
     );
   }
+}
+
+/// Lanza la modal con los detalles del ítem
+void showInfoModal(BuildContext ctx, Item it, AppState st) {
+  showModalBottomSheet(
+    context: ctx,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => InfoModal(id: it.id, st: st),
+  );
 }
