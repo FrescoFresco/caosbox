@@ -1,33 +1,38 @@
+# .github/workflows/firebase-hosting.yml
 name: Build & Deploy Flutter Web → Firebase Hosting
 on:
   push:
-    branches: [ main ]     # despliega cada vez que hagas push a main
+    branches: [ main ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Descarga tu repo
       - uses: actions/checkout@v4
 
-      # 2. Instala Flutter (último estable)
+      # ---------- 1. Flutter ----------
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable          # ⬅ 3.32.8 hoy (05-Ago-2025)
+          channel: stable            # 3.32.8 hoy
           cache: true
 
-      # 3. Prepara dependencias Dart
-      - run: flutter pub get
+      - name: 📦 Pub get
+        run: flutter pub get
 
-      # 4. Compila tu app para Web
-      - run: flutter build web --release --base-href=/
+      # ---------- 2. Build ----------
+      - name: 🏗️  Build web (release)
+        run: flutter build web --release --base-href=/
 
-      # 5. Sube artefacto a Firebase Hosting
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0.9.0   # ← versión correcta
+      # Debug opcional: muestra que index.html existe
+      - name: 🕵️  List build output
+        run: ls -R build/web | head -n 20
+
+      # ---------- 3. Deploy ----------
+      - name: 🚀  Deploy to Firebase Hosting (live)
+        uses: FirebaseExtended/action-hosting-deploy@v0.9.0
         with:
-          repoToken:           ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SA }}  # ⬅ ver paso 2
-          projectId:           caosbox-ef75b
-          channelId:           live          # producción
+          repoToken:               ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount:  ${{ secrets.FIREBASE_SA }}
+          projectId:               caosbox-ef75b
+          channelId:               live            # producción
