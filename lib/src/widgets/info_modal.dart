@@ -1,8 +1,9 @@
+// lib/src/widgets/info_modal.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
-
 
 class InfoModal extends StatefulWidget {
   final String id;
@@ -22,7 +23,7 @@ class _InfoModalState extends State<InfoModal> {
   void initState() {
     super.initState();
     final cur = widget.st.getItem(widget.id)!;
-    _ed = TextEditingController(text: cur.text);
+    _ed   = TextEditingController(text: cur.text);
     _note = TextEditingController(text: widget.st.note(widget.id));
   }
 
@@ -48,10 +49,8 @@ class _InfoModalState extends State<InfoModal> {
           appBar: AppBar(title: Text('Detalle • ${cur.id}')),
           body: Column(children: [
             const TabBar(tabs: [
-              Tab(text: 'Contenido'),
-              Tab(text: 'Relacionado'),
-              Tab(text: 'Info'),
-              Tab(text: 'Notas'),
+              Tab(text: 'Contenido'), Tab(text: 'Relacionado'),
+              Tab(text: 'Info'),      Tab(text: 'Notas'),
             ]),
             Expanded(
               child: TabBarView(children: [
@@ -61,13 +60,13 @@ class _InfoModalState extends State<InfoModal> {
                   child: TextField(
                     controller: _ed,
                     maxLines: null,
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
                     onChanged: (t) {
                       _deb?.cancel();
                       _deb = Timer(const Duration(milliseconds: 250), () {
                         widget.st.updateText(cur.id, t);
                       });
                     },
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
                   ),
                 ),
                 // Relacionado
@@ -76,12 +75,12 @@ class _InfoModalState extends State<InfoModal> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(children: [
-                    _infoRow('Tipo', cur.type.name),
-                    _infoRow('Creado', fmt.format(cur.createdAt)),
-                    _infoRow('Modificado', fmt.format(cur.modifiedAt)),
-                    _infoRow('Estado', cur.status.name),
-                    _infoRow('Cambios', '${cur.statusChanges}'),
-                    _infoRow('Relaciones', '${widget.st.links(cur.id).length}'),
+                    _row('Tipo',      cur.type.name),
+                    _row('Creado',    fmt.format(cur.createdAt)),
+                    _row('Modificado',fmt.format(cur.modifiedAt)),
+                    _row('Estado',    cur.status.name),
+                    _row('Cambios',   '${cur.statusChanges}'),
+                    _row('Relaciones','${widget.st.links(cur.id).length}'),
                   ]),
                 ),
                 // Notas
@@ -90,16 +89,16 @@ class _InfoModalState extends State<InfoModal> {
                   child: TextField(
                     controller: _note,
                     maxLines: null,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Escribe tus notas…',
+                    ),
                     onChanged: (t) {
                       _debN?.cancel();
                       _debN = Timer(const Duration(milliseconds: 250), () {
                         widget.st.setNote(cur.id, t);
                       });
                     },
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Escribe tus notas aquí…',
-                    ),
                   ),
                 ),
               ]),
@@ -110,18 +109,16 @@ class _InfoModalState extends State<InfoModal> {
     );
   }
 
-  Widget _infoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(children: [
-        SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
-        Expanded(child: Text(value)),
-      ]),
-    );
-  }
+  Widget _row(String l, String v) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(children: [
+      SizedBox(width: 120, child: Text(l, style: const TextStyle(fontWeight: FontWeight.w600))),
+      Expanded(child: Text(v)),
+    ]),
+  );
 }
 
-/// Helper global para mostrar esta modal desde cualquier parte
+/// Muestra la modal desde cualquier widget
 void showInfoModal(BuildContext ctx, Item it, AppState st) {
   showModalBottomSheet(
     context: ctx,
