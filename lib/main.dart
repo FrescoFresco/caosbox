@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -5,7 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// Para evitar ambigüedades:
+// Evitar ambigüedades entre modelos y utilidades:
 import 'src/models/models.dart' as models;
 import 'src/utils/filter_engine.dart' as engine;
 
@@ -27,6 +29,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'CaosBox',
       theme: ThemeData(useMaterial3: true),
       home: const AuthGate(),
     );
@@ -41,7 +44,9 @@ class AuthGate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (ctx, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (!snap.hasData) {
           return SignInScreen(
@@ -71,34 +76,41 @@ class CaosBox extends StatefulWidget {
 
 class _CaosBoxState extends State<CaosBox> {
   final st = models.AppState();
+
   @override
-  Widget build(BuildContext c) {
+  Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: st,
-      builder: (_, __) => DefaultTabController(
-        length: blocks.length,
-        child: Scaffold(
-          appBar: AppBar(
-            title: const Text('CaosBox'),
-            bottom: TabBar(tabs: [for (final b in blocks) Tab(icon: Icon(b.icon), text: b.label)]),
+      builder: (_, __) {
+        return DefaultTabController(
+          length: models.blocks.length,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('CaosBox'),
+              bottom: TabBar(
+                tabs: [for (final b in models.blocks) Tab(icon: Icon(b.icon), text: b.label)],
+              ),
+            ),
+            body: SafeArea(
+              child: TabBarView(
+                children: [
+                  for (final b in models.blocks)
+                    if (b.type != null)
+                      GenericScreen(b: b, st: st)
+                    else
+                      b.custom!(context, st),
+                ],
+              ),
+            ),
           ),
-          body: SafeArea(
-            child: TabBarView(children: [
-              for (final b in blocks)
-                if (b.type != null)
-                  GenericScreen(b: b, st: st)
-                else
-                  b.custom!(c, st)
-            ]),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
 class GenericScreen extends StatefulWidget {
-  final Block b;
+  final models.Block b;
   final models.AppState st;
   const GenericScreen({super.key, required this.b, required this.st});
   @override
@@ -121,44 +133,46 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
   void _refresh() => setState(() {});
 
   @override
-  Widget build(BuildContext ctx) {
-    final type = widget.b.type!;
-    final items = engine.FilterEngine.apply(widget.st.items(type), widget.st, _filter);
+  Widget build(BuildContext context) {
+    final t = widget.b.type!;
+    final items = engine.FilterEngine.apply(widget.st.items(t), widget.st, _filter);
+
     return Padding(
       padding: const EdgeInsets.all(12),
-      child: Column(children: [
-        // QuickAdd ya sólo acepta type y st
-        QuickAdd(type: type, st: widget.st),
-        const SizedBox(height: 12),
-        Flexible(
-          fit: FlexFit.loose,
-          child: SingleChildScrollView(child: ChipsPanel(set: _filter, onUpdate: _refresh, defaults: widget.b.defaults)),
-        ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (_, i) {
-              final it = items[i];
-              final open = _expanded.contains(it.id);
-              return ItemCard(
-                it: it,
-                st: widget.st,
-                ex: open,
-                onT: () {
-                  setState(() {
-                    if (open) _expanded.remove(it.id);
-                    else _expanded.add(it.id);
-                  });
-                },
-                onInfo: () => showInfoModal(ctx, it, widget.st),
-              );
-            },
+      child: Column(
+        children: [
+          QuickAdd(type: t, st: widget.st),
+          const SizedBox(height: 12),
+          Flexible(
+            fit: FlexFit.loose,
+            child: SingleChildScrollView(
+              child: ChipsPanel(set: _filter, onUpdate: _refresh, defaults: widget.b.defaults),
+            ),
           ),
-        ),
-      ]),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final it = items[i];
+                final open = _expanded.contains(it.id);
+                return ItemCard(
+                  it: it,
+                  st: widget.st,
+                  ex: open,
+                  onT: () {
+                    setState(() {
+                      if (open) _expanded.remove(it.id);
+                      else _expanded.add(it.id);
+                    });
+                  },
+                  onInfo: () => showInfoModal(context, it, widget.st),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-// Bloques y LinksBlock, InfoModal, etc. quedan igual, sin cambios de imports aquí.
