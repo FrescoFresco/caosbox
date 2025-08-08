@@ -1,8 +1,11 @@
-// lib/src/widgets/quick_add.dart
 import 'package:flutter/material.dart';
 import 'package:caosbox/src/models/models.dart' as models;
 
 class QuickAdd extends StatefulWidget {
+  final models.ItemType type;
+  final models.AppState  st;
+  final VoidCallback?    onAdded;
+
   const QuickAdd({
     super.key,
     required this.type,
@@ -10,56 +13,49 @@ class QuickAdd extends StatefulWidget {
     this.onAdded,
   });
 
-  final models.ItemType type;
-  final models.AppState st;
-  final VoidCallback?   onAdded;
-
-  @override State<QuickAdd> createState() => _QuickAddState();
+  @override
+  State<QuickAdd> createState() => _QuickAddState();
 }
 
 class _QuickAddState extends State<QuickAdd> {
-  late final TextEditingController _c;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = TextEditingController();
-  }
+  final _txt = TextEditingController();
 
   @override
   void dispose() {
-    _c.dispose();
+    _txt.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final cfg = widget.type == models.ItemType.idea
+    final models.ItemTypeCfg cfg = widget.type == models.ItemType.idea
         ? models.ideasCfg
         : models.actionsCfg;
 
-    return Row(children: [
-      Expanded(
-        child: TextField(
-          controller: _c,
+    return Card(
+      margin: const EdgeInsets.all(8),
+      child: ListTile(
+        leading: Icon(cfg.icon),
+        title: TextField(
+          controller: _txt,
           decoration: InputDecoration(
             hintText: cfg.hint,
-            prefixIcon: Icon(cfg.icon),
-            isDense: true,
+            border: InputBorder.none,
           ),
         ),
+        trailing: IconButton(
+          icon: const Icon(Icons.send),
+          onPressed: () {
+            final text = _txt.text.trim();
+            if (text.isEmpty) return;
+
+            final id = '${cfg.prefix}${widget.st.all.length + 1}';
+            widget.st.add(models.Item(id: id, text: text, type: widget.type));
+            _txt.clear();
+            widget.onAdded?.call();
+          },
+        ),
       ),
-      IconButton(
-        tooltip: 'Añadir',
-        icon: const Icon(Icons.add),
-        onPressed: () {
-          final txt = _c.text.trim();
-          if (txt.isEmpty) return;
-          widget.st.add(widget.type, txt);
-          _c.clear();
-          widget.onAdded?.call();
-        },
-      ),
-    ]);
+    );
   }
 }
