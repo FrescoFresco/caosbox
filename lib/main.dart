@@ -1,97 +1,92 @@
-// lib/src/models/models.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-enum ItemType   { idea, action }
-enum ItemStatus { normal, completed, archived }
+import 'package:caosbox/src/models/models.dart'   as models;
+import 'package:caosbox/src/widgets/quick_add.dart';
+import 'package:caosbox/src/widgets/chips_panel.dart';
+import 'package:caosbox/src/widgets/item_card.dart';
+import 'package:caosbox/src/utils/filter_engine.dart' as utils;
 
-/*──────────────────────────────────────────────────────────────────────────*/
-/*  MODELO PRINCIPAL                                                        */
-/*──────────────────────────────────────────────────────────────────────────*/
-
-class Item {
-  Item(this.id, this.text, this.type,
-      {this.status = ItemStatus.normal,
-       DateTime? created,
-       DateTime? modified,
-       this.statusChanges = 0})
-      : createdAt  = created  ?? DateTime.now(),
-        modifiedAt = modified ?? DateTime.now();
-
-  final String     id;
-  final String     text;
-  final ItemType   type;
-  final ItemStatus status;
-  final DateTime   createdAt;
-  final DateTime   modifiedAt;
-  final int        statusChanges;
-
-  Item copyWith({ItemStatus? status}) => Item(
-        id,
-        text,
-        type,
-        status: status ?? this.status,
-        created: createdAt,
-        modified: DateTime.now(),
-        statusChanges: statusChanges + 1,
-      );
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(const MyApp());
 }
 
-/*──────────────────────────────────────────────────────────────────────────*/
-/*  ESTADO GLOBAL                                                           */
-/*──────────────────────────────────────────────────────────────────────────*/
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-class AppState extends ChangeNotifier {
-  final _items = <ItemType, List<Item>>{
-    ItemType.idea  : <Item>[],
-    ItemType.action: <Item>[],
-  };
-
-  List<Item> items(ItemType t) => List.unmodifiable(_items[t]!);
-
-  void add(ItemType t, String txt) {
-    final id = '${t == ItemType.idea ? 'B1' : 'B2'}${_items[t]!.length + 1}';
-    _items[t]!.insert(0, Item(id, txt.trim(), t));
-    notifyListeners();
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'CaosBox',
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.teal),
+      home: const CaosBox(),
+    );
   }
 }
 
-/*──────────────────────────────────────────────────────────────────────────*/
-/*  CONFIG VISUAL POR TIPO                                                  */
-/*──────────────────────────────────────────────────────────────────────────*/
-
-class ItemTypeCfg {
-  const ItemTypeCfg({
-    required this.prefix,
-    required this.icon,
-    required this.label,
-    required this.hint,
-  });
-
-  final String   prefix;
-  final IconData icon;
-  final String   label;
-  final String   hint;
+class CaosBox extends StatefulWidget {
+  const CaosBox({super.key});
+  @override
+  State<CaosBox> createState() => _CaosBoxState();
 }
 
-const ideasCfg   = ItemTypeCfg(
-  prefix: 'B1',
-  icon  : Icons.lightbulb,
-  label : 'Ideas',
-  hint  : 'Escribe una idea…',
-);
+class _CaosBoxState extends State<CaosBox> {
+  final models.AppState _state   = models.AppState();
+  final utils.FilterSet _filter  = utils.FilterSet();
+  final Set<String>     _expand  = <String>{};
 
-const actionsCfg = ItemTypeCfg(
-  prefix: 'B2',
-  icon  : Icons.assignment,
-  label : 'Acciones',
-  hint  : 'Describe una acción…',
-);
+  @override
+  void dispose() {
+    _filter.dispose();
+    super.dispose();
+  }
 
-/*──────────────────────────────────────────────────────────────────────────*/
-/*  FILTROS – UTILIDAD SENCILLA                                             */
-/*──────────────────────────────────────────────────────────────────────────*/
+  void _refresh() => setState(() {});
 
-class FilterSet {
-  final text = TextEditingController();
-  void dispose() => text.dispose();
+  @override
+  Widget build(BuildContext context) {
+    final items = utils.FilterEngine.apply(
+      _state.items(models.ItemType.idea),
+      _state,
+      _filter,
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('CaosBox')),
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            QuickAdd(
+              type   : models.ItemType.idea,
+              st     : _state,
+              onAdded: _refresh,
+            ),
+            const SizedBox(height: 12),
+            ChipsPanel(set: _filter, onUpdate: _refresh),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView(
+                children: items.map((it) {
+                  final open = _expand.contains(it.id);
+                  return ItemCard(
+                    it         : it,
+                    st         : _state,
+                    isExpanded : open,
+                    onTapBody  : () {
+                      setState(() => open
+                          ? _expand.remove(it.id)
+                          : _expand.add(it.id));
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
