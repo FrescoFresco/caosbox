@@ -9,13 +9,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
-  firebase_core: ^3.24.0
-  firebase_auth: ^4.17.3
-  cloud_firestore: ^6.0.0
+  # Firebase núcleo + productos
+  firebase_core: ^3.15.2          # versión estable disponible
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12        # última que encaja con firebase_core 3.x
 
-  # UI Firebase
-  firebase_ui_auth: ^3.0.0
+  # UI (autenticación + OAuth Google)
+  firebase_ui_auth: ^2.0.0
   firebase_ui_oauth_google: ^2.0.0
 
   # Utilidades
