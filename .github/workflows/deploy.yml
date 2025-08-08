@@ -1,37 +1,29 @@
-name: Deploy Flutter Web to GitHub Pages
+name: Deploy Flutter Web
 
 on:
   push:
-    branches: [ main ]          # dispara el deploy en cada push a main
+    branches: [ main ]
 
 jobs:
-  build_and_deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Clona tu repo
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Instala Flutter estable y usa la caché de paquetes
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      # 3. Dependencias + lint opcional
       - run: flutter pub get
-      - run: flutter analyze          # quítalo si no quieres que falle por warnings
-
-      # 4. Compila la versión web
       - run: flutter build web --release --base-href=/
 
-      # 5. Publica /build/web en la rama gh-pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Verify build
+        run: test -f build/web/index.html
+
+      - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
           publish_branch: gh-pages
-          cname: caosbox.com          # pon tu dominio o elimina esta línea
+          cname: caosbox.com
