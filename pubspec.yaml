@@ -1,31 +1,31 @@
 name: caosbox
-description: Gestor de ideas/acciones con Flutter Web + Firebase
-publish_to: "none"
+description: CaosBox Flutter Web app
+publish_to: none
+version: 1.0.0+1
 
 environment:
-  sdk: ">=3.2.0 <4.0.0"
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
-  flutter: 
+  flutter:
     sdk: flutter
 
-  # FlutterFire núcleo
+  # FlutterFire
   firebase_core: ^4.0.0
-  firebase_auth: ^6.0.0
-  cloud_firestore: ^6.0.0
-
-  # UI de autenticación
+  firebase_auth: ^6.1.1
+  cloud_firestore: ^7.0.0
   firebase_ui_auth: ^3.0.0
   firebase_ui_oauth_google: ^2.0.0
 
-  # Utilidades extra
-  intl: ^0.19.0
-  collection: ^1.18.0
+  # Estado / utilidades
+  provider: ^6.0.5
+  intl: ^0.20.2
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
-  flutter_lints: ^3.0.1
   flutter_test:
     sdk: flutter
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true
