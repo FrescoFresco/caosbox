@@ -1,63 +1,31 @@
+// lib/src/widgets/chips_panel.dart
 import 'package:flutter/material.dart';
-import '../utils/filter_engine.dart';   // ← aquí viene el FilterSet bueno
+import 'package:caosbox/src/utils/filter_engine.dart' as utils;
 
 class ChipsPanel extends StatelessWidget {
-  final FilterSet set;
-  final VoidCallback onUpdate;
   const ChipsPanel({
     super.key,
     required this.set,
     required this.onUpdate,
   });
 
+  final utils.FilterSet set;
+  final VoidCallback    onUpdate;
+
   @override
   Widget build(BuildContext context) {
-    Chip buildChip(FilterKey k, String label) {
-      final mode   = set.modes[k]!;
-      final active = mode != FilterMode.off;
-      final bg     = active
-          ? (mode == FilterMode.include ? Colors.green : Colors.red).withOpacity(0.25)
-          : null;
-      final text   = mode == FilterMode.exclude ? '⊘$label' : label;
+    Widget buildChip(String label) => FilterChip(
+          label    : Text(label),
+          selected : false,
+          onSelected: (_) => onUpdate(),
+        );
 
-      return FilterChip(
-        label: Text(text),
-        selected: active,
-        selectedColor: bg,
-        onSelected: (_) {
-          set.cycle(k);
-          onUpdate();
-        },
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 8,
       children: [
-        TextField(
-          controller: set.text,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search),
-            hintText: 'Buscar…',
-            isDense: true,
-          ),
-          onChanged: (_) => onUpdate(),
-        ),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            buildChip(FilterKey.completed, '✓'),
-            buildChip(FilterKey.archived,  '↓'),
-            buildChip(FilterKey.hasLinks,  '~'),
-            if (set.hasActive)
-              IconButton(
-                icon: const Icon(Icons.clear, size: 16),
-                onPressed: () { set.clear(); onUpdate(); },
-              ),
-          ],
-        ),
+        buildChip('✓'),
+        buildChip('↓'),
+        buildChip('~'),
       ],
     );
   }
