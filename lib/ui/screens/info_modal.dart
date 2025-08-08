@@ -6,6 +6,7 @@ import '../../utils/extensions.dart';
 import '../style.dart';
 import '../widgets/item_card.dart';
 
+/// Lanza el modal Info
 void showInfoModal(BuildContext ctx, Item it, AppState st) {
   showModalBottomSheet(
     context: ctx,
@@ -48,11 +49,12 @@ class _InfoModalState extends State<InfoModal> {
             .toList();
 
         return FractionallySizedBox(
-          heightFactor: .9,
+          heightFactor: 0.9,
           child: DefaultTabController(
             length: 4,
             child: Material(
               child: Column(children: [
+                // ── Cabecera ────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(children: [
@@ -71,65 +73,77 @@ class _InfoModalState extends State<InfoModal> {
                   Tab(icon: Icon(Icons.info),         text: 'Info'),
                   Tab(icon: Icon(Icons.timer),        text: 'Tiempo'),
                 ]),
-                Expanded(
-                  child: TabBarView(children: [
-                    // Contenido
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextField(
-                        controller: ed,
-                        maxLines: null,
-                        decoration:
-                            const InputDecoration(border: OutlineInputBorder()),
-                        onChanged: (t) {
-                          _d1?.cancel();
-                          _d1 = Timer(const Duration(milliseconds: 300),
-                              () => widget.state.updateText(it.id, t));
-                        },
-                      ),
+                // ── Cuerpo ─────────────────────────────────────────────
+                Expanded(child: TabBarView(children: [
+                  // 1) Contenido
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: TextField(
+                      controller: ed,
+                      maxLines: null,
+                      decoration:
+                          const InputDecoration(border: OutlineInputBorder()),
+                      onChanged: (t) {
+                        _d1?.cancel();
+                        _d1 = Timer(
+                            const Duration(milliseconds: 300),
+                            () => widget.state.updateText(it.id, t));
+                      },
                     ),
-                    // Relacionado
-                    linked.isEmpty
-                        ? const Center(child: Text('Sin relaciones'))
-                        : ListView.builder(
-                            itemCount: linked.length,
-                            itemBuilder: (_, i) => ItemCard(
-                              item: linked[i],
+                  ),
+                  // 2) Relacionado  ─── solo ítems ligados + checkbox para romper
+                  linked.isEmpty
+                      ? const Center(child: Text('Sin relaciones'))
+                      : ListView.builder(
+                          itemCount: linked.length,
+                          itemBuilder: (_, i) {
+                            final li = linked[i];
+                            return ItemCard(
+                              item: li,
                               st: widget.state,
                               ex: false,
                               onT: () {},
-                              onInfo: () => showInfoModal(
-                                  ctx, linked[i], widget.state),
-                            ),
-                          ),
-                    // Info
-                    ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _row('Creado:',     it.createdAt.f),
-                        _row('Modificado:', it.modifiedAt.f),
-                        _row('Estado:',     it.status.name),
-                        _row('Cambios:',    '${it.statusChanges}'),
-                        _row('Enlaces:',    '${linked.length}'),
-                      ],
+                              onInfo: () =>
+                                  showInfoModal(ctx, li, widget.state),
+                              trailing: Checkbox(
+                                value: true,              // relación activa
+                                onChanged: (_) {
+                                  // rompe la relación y actualiza la lista
+                                  setState(() => widget.state
+                                      .toggleLink(widget.id, li.id));
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                  // 3) Info
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _row('Creado:',     it.createdAt.f),
+                      _row('Modificado:', it.modifiedAt.f),
+                      _row('Estado:',     it.status.name),
+                      _row('Cambios:',    '${it.statusChanges}'),
+                      _row('Enlaces:',    '${linked.length}'),
+                    ],
+                  ),
+                  // 4) Tiempo / notas
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: TextField(
+                      controller: note,
+                      maxLines: null,
+                      decoration:
+                          const InputDecoration(border: OutlineInputBorder()),
+                      onChanged: (t) {
+                        _d2?.cancel();
+                        _d2 = Timer(
+                            const Duration(milliseconds: 300),
+                            () => widget.state.setNote(it.id, t));
+                      },
                     ),
-                    // Tiempo / notas
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextField(
-                        controller: note,
-                        maxLines: null,
-                        decoration:
-                            const InputDecoration(border: OutlineInputBorder()),
-                        onChanged: (t) {
-                          _d2?.cancel();
-                          _d2 = Timer(const Duration(milliseconds: 300),
-                              () => widget.state.setNote(it.id, t));
-                        },
-                      ),
-                    ),
-                  ]),
-                ),
+                  ),
+                ])),
               ]),
             ),
           ),
