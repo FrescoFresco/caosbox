@@ -3,14 +3,12 @@ import 'package:caosbox/src/models/models.dart' as models;
 
 class QuickAdd extends StatefulWidget {
   final models.ItemType type;
-  final models.AppState  st;
-  final VoidCallback?    onAdded;
+  final models.AppState st;
 
   const QuickAdd({
     super.key,
     required this.type,
     required this.st,
-    this.onAdded,
   });
 
   @override
@@ -18,44 +16,44 @@ class QuickAdd extends StatefulWidget {
 }
 
 class _QuickAddState extends State<QuickAdd> {
-  final _txt = TextEditingController();
+  final _ctrl = TextEditingController();
 
   @override
   void dispose() {
-    _txt.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final models.ItemTypeCfg cfg = widget.type == models.ItemType.idea
+    final cfg = widget.type == models.ItemType.idea
         ? models.ideasCfg
         : models.actionsCfg;
 
-    return Card(
-      margin: const EdgeInsets.all(8),
-      child: ListTile(
-        leading: Icon(cfg.icon),
-        title: TextField(
-          controller: _txt,
+    return Row(children: [
+      Expanded(
+        child: TextField(
+          controller: _ctrl,
           decoration: InputDecoration(
             hintText: cfg.hint,
-            border: InputBorder.none,
+            prefixIcon: Icon(cfg.icon),
           ),
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.send),
-          onPressed: () {
-            final text = _txt.text.trim();
-            if (text.isEmpty) return;
-
-            final id = '${cfg.prefix}${widget.st.all.length + 1}';
-            widget.st.add(models.Item(id: id, text: text, type: widget.type));
-            _txt.clear();
-            widget.onAdded?.call();
-          },
-        ),
       ),
-    );
+      IconButton(
+        icon: const Icon(Icons.send),
+        onPressed: () {
+          if (_ctrl.text.trim().isEmpty) return;
+          widget.st.add(
+            models.Item(
+              id   : '${cfg.prefix}${DateTime.now().millisecondsSinceEpoch}',
+              text : _ctrl.text.trim(),
+              type : widget.type,
+            ),
+          );
+          _ctrl.clear();
+        },
+      ),
+    ]);
   }
 }
