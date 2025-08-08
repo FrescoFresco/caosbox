@@ -10,35 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout código
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      # 2️⃣ Instalar Flutter (último stable)
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable          # siempre la última estable
-          cache: true              # acelera builds
+    # ① Instala Flutter 3.22.x (último estable que incluía core 3 por defecto)
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        flutter-version: '3.22.1'
 
-      # 3️⃣ Restaurar dependencias
-      - name: Get pub packages
-        run: flutter pub get
+    # ② Cache de paquetes pub (acelera builds)
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.pub-cache
+        key: ${{ runner.os }}-pub-${{ hashFiles('pubspec.lock') }}
+        restore-keys: ${{ runner.os }}-pub-
 
-      # 4️⃣ Compilar para Web (carpeta build/web)
-      - name: Build Flutter web
-        run: flutter build web --release --base-href=/
+    # ③ Build web
+    - name: Build Flutter web
+      run: flutter build web --release --base-href=/
 
-      # 5️⃣ Deploy a Firebase Hosting
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
-          projectId: caosbox-ef75b
-          channelId: live               # usa “live” o “preview-<nombre>” según necesites
-          target: default               # si tienes varios targets de Hosting, ajusta
-
-      # 6️⃣ (Optativo) Publicar la URL de preview
-      - name: Output deployment URL
-        if: steps.deploy.outputs.details_url != ''
-        run: echo "Preview URL 👉 ${{ steps.deploy.outputs.details_url }}"
+    # ④ Deploy a Firebase Hosting
+    - name: Deploy to Firebase Hosting
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: "${{ secrets.GITHUB_TOKEN }}"
+        firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+        projectId: caosbox-ef75b
+        channelId: live      # producción
+        target: caosbox-web  # mismo target que creaste en firebase.json
