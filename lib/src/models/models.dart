@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// ────────────────────────────────────────────────────────────────────────────
+/// ──────────────────────────────────────────────────────────
 /// ENUMS
-/// ────────────────────────────────────────────────────────────────────────────
+/// ──────────────────────────────────────────────────────────
 enum ItemType   { idea, action }
 enum ItemStatus { normal, completed, archived }
 
-/// ────────────────────────────────────────────────────────────────────────────
-/// DATA MODEL
-/// ────────────────────────────────────────────────────────────────────────────
+/// ──────────────────────────────────────────────────────────
+/// CORE ITEM
+/// ──────────────────────────────────────────────────────────
 class Item {
   final String      id;
   final String      text;
@@ -23,28 +23,28 @@ class Item {
   });
 }
 
-/// ────────────────────────────────────────────────────────────────────────────
-/// APP-STATE (Dummy in-memory store solo para compilar)
-/// ────────────────────────────────────────────────────────────────────────────
-class AppState {
+/// ──────────────────────────────────────────────────────────
+/// IN-MEMORY APP STATE  (placeholder simple; ajústalo a tu lógica)
+/// ──────────────────────────────────────────────────────────
+class AppState extends ChangeNotifier {
   final List<Item> _items = [];
 
-  /// Devuelve TODA la lista inmutable
   List<Item> get all => List.unmodifiable(_items);
 
-  /// Devuelve solo items del tipo indicado
   List<Item> items(ItemType t) =>
       _items.where((e) => e.type == t).toList(growable: false);
 
-  /// Relaciones vacías (placeholder)
-  List<String> links(String id) => [];
+  List<String> links(String id) => [];           // placeholder
 
-  void add(Item it) => _items.add(it);
+  void add(Item it) {
+    _items.add(it);
+    notifyListeners();
+  }
 }
 
-/// ────────────────────────────────────────────────────────────────────────────
-/// CONFIG-UI para QuickAdd
-/// ────────────────────────────────────────────────────────────────────────────
+/// ──────────────────────────────────────────────────────────
+/// CONFIGURACIÓN UI  (QuickAdd)
+/// ──────────────────────────────────────────────────────────
 class ItemTypeCfg {
   final String    prefix;
   final IconData  icon;
@@ -58,14 +58,14 @@ class ItemTypeCfg {
   });
 }
 
-const ItemTypeCfg ideasCfg   = ItemTypeCfg(
+const ideasCfg   = ItemTypeCfg(
   prefix: 'B1',
   icon  : Icons.lightbulb,
   label : 'Ideas',
   hint  : 'Escribe tu idea…',
 );
 
-const ItemTypeCfg actionsCfg = ItemTypeCfg(
+const actionsCfg = ItemTypeCfg(
   prefix: 'B2',
   icon  : Icons.assignment,
   label : 'Acciones',
