@@ -1,70 +1,150 @@
+// lib/src/models/models.dart
 import 'package:flutter/material.dart';
 
-/* ─── ENUMS ─────────────────────────────────────────────── */
+/* ─── TIPOS BÁSICOS ───────────────────────────────────────────────────────── */
+
 enum ItemType   { idea, action }
 enum ItemStatus { normal, completed, archived }
 
-/* ─── DATA CLASS ────────────────────────────────────────── */
 class Item {
-  final String id, text;
-  final ItemType type;
+  final String     id;
+  final String     text;
+  final ItemType   type;
   final ItemStatus status;
-  Item(this.id, this.text, this.type, [this.status = ItemStatus.normal]);
+  final DateTime   createdAt;
+  final DateTime   modifiedAt;
+  final int        statusChanges;
 
-  Item copyWith({ItemStatus? status}) =>
-      Item(id, text, type, status ?? this.status);
-}
+  Item(
+    this.id,
+    this.text,
+    this.type, {
+    this.status = ItemStatus.normal,
+    DateTime? created,
+    DateTime? modified,
+    this.statusChanges = 0,
+  })  : createdAt  = created  ?? DateTime.now(),
+        modifiedAt = modified ?? DateTime.now();
 
-/* ─── APP STATE (in-memory) ─────────────────────────────── */
-class AppState extends ChangeNotifier {
-  final _map = <ItemType, List<Item>>{
-    ItemType.idea   : [],
-    ItemType.action : []
-  };
-
-  List<Item> items(ItemType t) => List.unmodifiable(_map[t]!);
-
-  void add(ItemType t, String text) {
-    _map[t]!.add(Item('${t.name}_${_map[t]!.length+1}', text, t));
-    notifyListeners();
+  Item copyWith({ItemStatus? status}) {
+    final ns  = status ?? this.status;
+    final chg = ns != this.status;
+    return Item(
+      id,
+      text,
+      type,
+      status:        ns,
+      created:       createdAt,
+      modified:      chg ? DateTime.now() : modifiedAt,
+      statusChanges: chg ? statusChanges + 1 : statusChanges,
+    );
   }
-
-  // Placeholder links
-  final _links = <String, Set<String>>{};
-  Set<String> links(String id) => _links[id] ?? {};
 }
 
-/* ─── FILTER SUPPORT (simple) ───────────────────────────── */
-enum FilterMode { off, include, exclude }
-enum FilterKey  { completed, archived, hasLinks }
+/* ─── ESTILO / COMPORTAMIENTO PARA WIDGETS ──────────────────────────────── */
 
-class FilterSet {
-  final text = TextEditingController();
-  final modes = {
-    FilterKey.completed : FilterMode.off,
-    FilterKey.archived  : FilterMode.off,
-    FilterKey.hasLinks  : FilterMode.off,
-  };
-  void dispose() => text.dispose();
-}
-
-/* ─── VISUAL HELPERS ───────────────────────────────────── */
 class Style {
-  static const card   = BoxDecoration(color: Colors.white, borderRadius: BorderRadius.all(Radius.circular(8)));
-  static const id     = TextStyle(fontSize: 12, color: Colors.grey);
-  static const content= TextStyle(fontSize: 14);
+  static const title   = TextStyle(fontSize: 18, fontWeight: FontWeight.bold);
+  static const id      = TextStyle(fontSize: 12, color: Colors.grey);
+  static const content = TextStyle(fontSize: 14);
+
+  static BoxDecoration get card => BoxDecoration(
+        border: Border.all(color: Colors.black12),
+        borderRadius: BorderRadius.circular(8),
+      );
+
+  static const statusIcons = <ItemStatus, Map<String, dynamic>>{
+    ItemStatus.completed : { 'icon': Icons.check   , 'color': Colors.green },
+    ItemStatus.archived  : { 'icon': Icons.archive , 'color': Colors.grey  },
+  };
 }
 
 class Behavior {
-  static Future<bool> swipe(_, __, ___) async => false;
+  static Future<bool> swipe(
+    DismissDirection dir,
+    ItemStatus        cur,
+    void Function(ItemStatus) act,
+  ) async {
+    final next = dir == DismissDirection.startToEnd
+        ? (cur == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed)
+        : (cur == ItemStatus.archived  ? ItemStatus.normal : ItemStatus.archived);
+    act(next);
+    return false;
+  }
+
+  static Widget bg(bool secondary) => Container(
+        color: (secondary ? Colors.grey : Colors.green).withOpacity(0.20),
+        child: Align(
+          alignment: secondary ? Alignment.centerRight : Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Icon(
+              secondary ? Icons.archive : Icons.check,
+              color: secondary ? Colors.grey : Colors.green,
+            ),
+          ),
+        ),
+      );
 }
 
-/* ─── ITEM TYPE CONFIGS ────────────────────────────────── */
-class ItemTypeCfg {
-  final String prefix, hint;
-  final IconData icon;
-  const ItemTypeCfg(this.prefix, this.hint, this.icon);
-}
+/* ─── ESTADO GLOBAL ─────────────────────────────────────────────────────── */
 
-const ideasCfg   = ItemTypeCfg('B1', 'Escribe tu idea…', Icons.lightbulb);
-const actionsCfg = ItemTypeCfg('B2', 'Describe la acción…', Icons.assignment);
+class AppState extends ChangeNotifier {
+  final _byType  = <ItemType, List<Item>>{
+    ItemType.idea   : <Item>[],
+    ItemType.action : <Item>[],
+  };
+  final _links = <String, Set<String>>{};
+  final _idCnt = <ItemType, int>{};
+
+  // --- CRUD ----------------------------------------------------------------
+  void add(ItemType t, String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) return;
+
+    final n   = (_idCnt[t] ?? 0) + 1;
+    _idCnt[t] = n;
+    final id  = (t == ItemType.idea ? 'B1' : 'B2') + n.toString().padLeft(3, '0');
+
+    _byType[t]!.insert(0, Item(id, text, t));
+    notifyListeners();
+  }
+
+  bool setStatus(String id, ItemStatus s) => _update(id, (it) => it.copyWith(status: s));
+  bool updateText(String id, String txt)  => _update(id,
+        (it) => Item(it.id, txt, it.type,
+          status       : it.status,
+          created      : it.createdAt,
+          modified     : DateTime.now(),
+          statusChanges: it.statusChanges,
+        ));
+
+  // --- utilidades ----------------------------------------------------------
+  List<Item> items(ItemType t) => List.unmodifiable(_byType[t]!);
+  List<Item> get all           => _byType.values.expand((e) => e).toList();
+
+  Set<String> links(String id) => _links[id] ?? const {};
+
+  void toggleLink(String a, String b) {
+    if (a == b) return;
+    final sa = _links.putIfAbsent(a, () => <String>{});
+    final sb = _links.putIfAbsent(b, () => <String>{});
+    if (sa.remove(b)) {
+      sb.remove(a);
+    } else {
+      sa.add(b); sb.add(a);
+    }
+    notifyListeners();
+  }
+
+  // --- helper privado ------------------------------------------------------
+  bool _update(String id, Item Function(Item) builder) {
+    final it = all.firstWhere((e) => e.id == id, orElse: () => Item('','',ItemType.idea));
+    if (it.id.isEmpty) return false;
+    final L   = _byType[it.type]!;
+    final idx = L.indexWhere((e) => e.id == id);
+    L[idx]    = builder(it);
+    notifyListeners();
+    return true;
+  }
+}
