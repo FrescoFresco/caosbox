@@ -1,193 +1,97 @@
-// lib/main.dart
-import 'dart:async';
-
+// lib/src/models/models.dart
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
-import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 
-import 'src/models/models.dart';
-import 'src/utils/filter_engine.dart' as utils;
+enum ItemType   { idea, action }
+enum ItemStatus { normal, completed, archived }
 
-import 'src/widgets/quick_add.dart';
-import 'src/widgets/chips_panel.dart';
-import 'src/widgets/item_card.dart';
-import 'src/widgets/info_modal.dart';
+/*──────────────────────────────────────────────────────────────────────────*/
+/*  MODELO PRINCIPAL                                                        */
+/*──────────────────────────────────────────────────────────────────────────*/
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();          // <- usa tu firebase_options si lo prefieres
-  runApp(const MyApp());
-}
+class Item {
+  Item(this.id, this.text, this.type,
+      {this.status = ItemStatus.normal,
+       DateTime? created,
+       DateTime? modified,
+       this.statusChanges = 0})
+      : createdAt  = created  ?? DateTime.now(),
+        modifiedAt = modified ?? DateTime.now();
 
-/* ───────────────────────────────────────────────────────────────────────── */
-/*  ROOT                                                                   */
-/* ───────────────────────────────────────────────────────────────────────── */
+  final String     id;
+  final String     text;
+  final ItemType   type;
+  final ItemStatus status;
+  final DateTime   createdAt;
+  final DateTime   modifiedAt;
+  final int        statusChanges;
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'CaosBox',
-        theme: ThemeData(useMaterial3: true),
-        home: const AuthGate(),
+  Item copyWith({ItemStatus? status}) => Item(
+        id,
+        text,
+        type,
+        status: status ?? this.status,
+        created: createdAt,
+        modified: DateTime.now(),
+        statusChanges: statusChanges + 1,
       );
 }
 
-/* ───────────────────────────────────────────────────────────────────────── */
-/*  AUTH GATE                                                               */
-/* ───────────────────────────────────────────────────────────────────────── */
+/*──────────────────────────────────────────────────────────────────────────*/
+/*  ESTADO GLOBAL                                                           */
+/*──────────────────────────────────────────────────────────────────────────*/
 
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+class AppState extends ChangeNotifier {
+  final _items = <ItemType, List<Item>>{
+    ItemType.idea  : <Item>[],
+    ItemType.action: <Item>[],
+  };
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (ctx, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (!snap.hasData) {
-          return SignInScreen(
-            providers: [EmailAuthProvider()],
-            actions: [
-              AuthStateChangeAction((c, s) {
-                if (s is SignedIn) Navigator.of(c).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const CaosBox()),
-                );
-              }),
-            ],
-          );
-        }
-        return const CaosBox();
-      },
-    );
+  List<Item> items(ItemType t) => List.unmodifiable(_items[t]!);
+
+  void add(ItemType t, String txt) {
+    final id = '${t == ItemType.idea ? 'B1' : 'B2'}${_items[t]!.length + 1}';
+    _items[t]!.insert(0, Item(id, txt.trim(), t));
+    notifyListeners();
   }
 }
 
-/* ───────────────────────────────────────────────────────────────────────── */
-/*  MAIN APP – TABS                                                         */
-/* ───────────────────────────────────────────────────────────────────────── */
+/*──────────────────────────────────────────────────────────────────────────*/
+/*  CONFIG VISUAL POR TIPO                                                  */
+/*──────────────────────────────────────────────────────────────────────────*/
 
-class CaosBox extends StatefulWidget {
-  const CaosBox({super.key});
-  @override State<CaosBox> createState() => _CaosBoxState();
-}
-
-class _CaosBoxState extends State<CaosBox> {
-  final _state  = AppState();
-  final _filter = utils.FilterSet();
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _state,
-      builder: (_, __) {
-        return DefaultTabController(
-          length: 2,
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('CaosBox'),
-              bottom: const TabBar(tabs: [
-                Tab(icon: Icon(Icons.lightbulb), text: 'Ideas'),
-                Tab(icon: Icon(Icons.assignment), text: 'Acciones'),
-              ]),
-            ),
-            body: TabBarView(children: [
-              _GenericScreen(type: ItemType.idea  , st: _state, filter: _filter),
-              _GenericScreen(type: ItemType.action, st: _state, filter: _filter),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/* ───────────────────────────────────────────────────────────────────────── */
-/*  GENERIC LIST + COMPOSER                                                 */
-/* ───────────────────────────────────────────────────────────────────────── */
-
-class _GenericScreen extends StatefulWidget {
-  const _GenericScreen({
-    required this.type,
-    required this.st,
-    required this.filter,
+class ItemTypeCfg {
+  const ItemTypeCfg({
+    required this.prefix,
+    required this.icon,
+    required this.label,
+    required this.hint,
   });
 
-  final ItemType        type;
-  final AppState        st;
-  final utils.FilterSet filter;
-
-  @override State<_GenericScreen> createState() => _GenericScreenState();
+  final String   prefix;
+  final IconData icon;
+  final String   label;
+  final String   hint;
 }
 
-class _GenericScreenState extends State<_GenericScreen>
-    with AutomaticKeepAliveClientMixin {
-  late final TextEditingController _c;
-  final Set<String> _expanded = <String>{};
+const ideasCfg   = ItemTypeCfg(
+  prefix: 'B1',
+  icon  : Icons.lightbulb,
+  label : 'Ideas',
+  hint  : 'Escribe una idea…',
+);
 
-  @override
-  void initState() {
-    super.initState();
-    _c = TextEditingController();
-  }
+const actionsCfg = ItemTypeCfg(
+  prefix: 'B2',
+  icon  : Icons.assignment,
+  label : 'Acciones',
+  hint  : 'Describe una acción…',
+);
 
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+/*──────────────────────────────────────────────────────────────────────────*/
+/*  FILTROS – UTILIDAD SENCILLA                                             */
+/*──────────────────────────────────────────────────────────────────────────*/
 
-  void _refresh() => setState(() {});
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    final items = utils.FilterEngine.apply(
-      widget.st.items(widget.type),
-      widget.st,
-      widget.filter,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(children: [
-        QuickAdd(
-          type   : widget.type,
-          st     : widget.st,
-          onAdded: _refresh,
-        ),
-        const SizedBox(height: 12),
-        ChipsPanel(set: widget.filter, onUpdate: _refresh),
-        const SizedBox(height: 8),
-        Expanded(
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (_, i) {
-              final it   = items[i];
-              final open = _expanded.contains(it.id);
-              return ItemCard(
-                it          : it,
-                st          : widget.st,
-                isExpanded  : open,
-                onTapBody   : () {
-                  setState(() => open
-                      ? _expanded.remove(it.id)
-                      : _expanded.add(it.id));
-                },
-                onLongInfo  : () => showInfoModal(context, it, widget.st),
-              );
-            },
-          ),
-        ),
-      ]),
-    );
-  }
+class FilterSet {
+  final text = TextEditingController();
+  void dispose() => text.dispose();
 }
