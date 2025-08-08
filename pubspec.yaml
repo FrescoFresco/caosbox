@@ -1,32 +1,33 @@
 name: caosbox
-description: Caja de ideas/acciones conectadas
+description: Gestor de ideas + acciones en Flutter Web
 publish_to: "none"
-version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"         # core 3 trabaja con Dart 3.0 – 3.3 aprox.
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # ► FlutterFire Rama 3 (100 % estable)
+  # --- FlutterFire núcleo v3 ---
   firebase_core: ^3.15.2
   firebase_auth: ^5.7.0
   cloud_firestore: ^5.6.12
 
-  # UI de autenticación compatible con core 3
+  # UI de autenticación
   firebase_ui_auth: ^2.5.5
-  firebase_ui_oauth_google: ^2.5.5
+  firebase_ui_oauth_google: ^1.4.3
 
-  # Otros paquetes de tu proyecto
+  # utilidades
   intl: ^0.20.2
   provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^3.0.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/
