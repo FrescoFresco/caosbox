@@ -1,31 +1,32 @@
 name: caosbox
-description: CaosBox Flutter Web app
-publish_to: none
+description: Caja de ideas/acciones conectadas
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
+  sdk: ">=3.0.0 <4.0.0"         # core 3 trabaja con Dart 3.0 – 3.3 aprox.
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # FlutterFire
-  firebase_core: ^4.0.0
-  firebase_auth: ^6.1.1
-  cloud_firestore: ^7.0.0
-  firebase_ui_auth: ^3.0.0
-  firebase_ui_oauth_google: ^2.0.0
+  # ► FlutterFire Rama 3 (100 % estable)
+  firebase_core: ^3.15.2
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.12
 
-  # Estado / utilidades
-  provider: ^6.0.5
+  # UI de autenticación compatible con core 3
+  firebase_ui_auth: ^2.5.5
+  firebase_ui_oauth_google: ^2.5.5
+
+  # Otros paquetes de tu proyecto
   intl: ^0.20.2
-  cupertino_icons: ^1.0.6
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.1
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
