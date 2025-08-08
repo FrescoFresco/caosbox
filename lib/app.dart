@@ -15,7 +15,7 @@ class _CaosAppState extends State<CaosApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CaosBox',
+      title: 'CaosBox (Beta)',
       theme: ThemeData(useMaterial3: true),
       home: AnimatedBuilder(
         animation: st,
