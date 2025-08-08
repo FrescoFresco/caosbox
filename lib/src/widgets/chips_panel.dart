@@ -1,31 +1,64 @@
 import 'package:flutter/material.dart';
-import '../models/models.dart' as models;
+import '../utils/filter_engine.dart';   // ← aquí viene el FilterSet bueno
 
 class ChipsPanel extends StatelessWidget {
-  final models.FilterSet set;
+  final FilterSet set;
   final VoidCallback onUpdate;
-  const ChipsPanel({super.key, required this.set, required this.onUpdate});
+  const ChipsPanel({
+    super.key,
+    required this.set,
+    required this.onUpdate,
+  });
 
-  @override Widget build(BuildContext ctx) {
-    chip(models.FilterKey k, String label) {
-      final m   = set.modes[k]!;
-      final sel = m != models.FilterMode.off;
+  @override
+  Widget build(BuildContext context) {
+    Chip buildChip(FilterKey k, String label) {
+      final mode   = set.modes[k]!;
+      final active = mode != FilterMode.off;
+      final bg     = active
+          ? (mode == FilterMode.include ? Colors.green : Colors.red).withOpacity(0.25)
+          : null;
+      final text   = mode == FilterMode.exclude ? '⊘$label' : label;
+
       return FilterChip(
-        label: Text(label),
-        selected: sel,
+        label: Text(text),
+        selected: active,
+        selectedColor: bg,
         onSelected: (_) {
-          set.modes[k] = models.FilterMode.values[(m.index+1)%3];
+          set.cycle(k);
           onUpdate();
-        });
+        },
+      );
     }
 
-    return Column(children: [
-      TextField(controller: set.text, decoration: const InputDecoration(prefixIcon: Icon(Icons.search))),
-      Wrap(spacing: 8, children: [
-        chip(models.FilterKey.completed,'✓'),
-        chip(models.FilterKey.archived,'↓'),
-        chip(models.FilterKey.hasLinks,'~'),
-      ])
-    ]);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: set.text,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            hintText: 'Buscar…',
+            isDense: true,
+          ),
+          onChanged: (_) => onUpdate(),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            buildChip(FilterKey.completed, '✓'),
+            buildChip(FilterKey.archived,  '↓'),
+            buildChip(FilterKey.hasLinks,  '~'),
+            if (set.hasActive)
+              IconButton(
+                icon: const Icon(Icons.clear, size: 16),
+                onPressed: () { set.clear(); onUpdate(); },
+              ),
+          ],
+        ),
+      ],
+    );
   }
 }
