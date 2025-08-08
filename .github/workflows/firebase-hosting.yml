@@ -1,28 +1,39 @@
-name: caosbox
-description: Gestor de ideas y acciones en Flutter Web
-version: 1.0.0+1
+name: Build & Deploy Flutter Web
 
-environment:
-  sdk: ">=3.3.0 <4.0.0"
-  flutter: ">=3.16.0"
+on:
+  push:
+    branches: [main]          # despliega cada vez que subes a main
+  workflow_dispatch:          # y permite lanzarlo manualmente
 
-dependencies:
-  flutter:
-    sdk: flutter
-  firebase_core: ^4.3.2
-  firebase_auth: ^6.1.1
-  cloud_firestore: ^4.15.6
-  firebase_ui_auth: ^3.0.0
-  firebase_ui_oauth_google: ^2.0.0
-  cupertino_icons: ^1.0.6
-  flutter_svg: ^2.0.7
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^3.0.1
+    steps:
+      # 1 ─── Descarga del código
+      - name: Checkout
+        uses: actions/checkout@v4
 
-flutter:
-  uses-material-design: true
-  assets:
-    - assets/images/
+      # 2 ─── Instalación de Flutter (canal estable más reciente)
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable     # no fijamos versión → siempre la estable más nueva
+
+      # 3 ─── Dependencias
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # 4 ─── Compilación Web (carpeta build/web)
+      - name: Build Flutter Web
+        run: flutter build web --release --base-href=/
+
+      # 5 ─── Deploy a Firebase Hosting (canal "live")
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0   # tag oficial
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"         # → viene por defecto
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_CAOSBOX }}"
+          channelId: live                                  # deploy final
+          projectId: caosbox-ef75b                         # tu ID de proyecto
+          entryPoint: build/web                            # carpeta pública
