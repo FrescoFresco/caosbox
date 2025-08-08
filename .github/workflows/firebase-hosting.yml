@@ -10,26 +10,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      # 1️⃣ Checkout código
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # 2️⃣ Instalar Flutter (último stable)
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable          # Usará la última estable disponible
+          channel: stable          # siempre la última estable
+          cache: true              # acelera builds
 
-      - name: Install dependencies
+      # 3️⃣ Restaurar dependencias
+      - name: Get pub packages
         run: flutter pub get
 
+      # 4️⃣ Compilar para Web (carpeta build/web)
       - name: Build Flutter web
-        run: flutter build web --release
+        run: flutter build web --release --base-href=/
 
+      # 5️⃣ Deploy a Firebase Hosting
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_CAOSBOX }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
           projectId: caosbox-ef75b
-          channelId: live           # publica directo al sitio
-        env:
-          FIREBASE_CLI_PREVIEWS: hostingchannels
+          channelId: live               # usa “live” o “preview-<nombre>” según necesites
+          target: default               # si tienes varios targets de Hosting, ajusta
+
+      # 6️⃣ (Optativo) Publicar la URL de preview
+      - name: Output deployment URL
+        if: steps.deploy.outputs.details_url != ''
+        run: echo "Preview URL 👉 ${{ steps.deploy.outputs.details_url }}"
