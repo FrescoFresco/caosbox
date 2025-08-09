@@ -1,6 +1,6 @@
-name: caos_box
-description: Gestor de ideas y acciones con enlaces y filtros.
-version: 1.0.0+1
+name: caosbox
+description: CaosBox (Beta)
+publish_to: "none"
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
