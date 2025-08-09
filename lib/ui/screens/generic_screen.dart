@@ -1,9 +1,7 @@
-
 import 'package:flutter/material.dart';
 import '../../config/blocks.dart';
 import '../../models/enums.dart';
 import '../../state/app_state.dart';
-import '../../ui/widgets/composer_card.dart';
 import '../../ui/widgets/chips_panel.dart';
 import '../../ui/widgets/item_card.dart';
 import 'info_modal.dart';
@@ -18,21 +16,19 @@ class GenericScreen extends StatefulWidget {
 
 class _GenericScreenState extends State<GenericScreen>
     with AutomaticKeepAliveClientMixin {
-  late final TextEditingController _c;
   final _f = FilterSet();
   final _ex = <String>{};
 
-  @override void initState() { super.initState(); _c = TextEditingController(); }
-  @override void dispose() { _c.dispose(); _f.dispose(); super.dispose(); }
+  @override void dispose() { _f.dispose(); super.dispose(); }
   void _r() => setState(() {});
   @override bool get wantKeepAlive => true;
 
   @override Widget build(BuildContext ctx) {
     super.build(ctx);
     final t   = widget.block.type!;
-    final cfg = widget.block.cfg!;
     final items = widget.state.items(t);
 
+    // Filtro idéntico al actual
     final filtered = items.where((it) {
       final q = _f.text.text.toLowerCase();
       if (q.isNotEmpty && !('${it.id} ${it.text}'.toLowerCase().contains(q)))
@@ -52,14 +48,7 @@ class _GenericScreenState extends State<GenericScreen>
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        ComposerCard(
-          icon: cfg.icon,
-          hint: cfg.hint,
-          c: _c,
-          onAdd: () { widget.state.add(t, _c.text); _c.clear(); _r(); },
-          onCancel: () { _c.clear(); _r(); },
-        ),
-        const SizedBox(height: 12),
+        // Ya no hay ComposerCard: el FAB se encarga de agregar
         ChipsPanel(set: _f, onUpdate: _r),
         const SizedBox(height: 8),
         Expanded(
