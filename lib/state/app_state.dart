@@ -4,67 +4,55 @@ import '../models/item.dart';
 import '../config/blocks.dart';
 
 class AppState extends ChangeNotifier {
-  // listas por tipo
   final Map<ItemType, List<Item>> _items = {
     ItemType.idea: <Item>[],
     ItemType.action: <Item>[],
   };
 
-  // relaciones bidireccionales por id
+  // relaciones bidireccionales: id -> {ids}
   final Map<String, Set<String>> _links = {};
 
-  // contadores por tipo (para generar ids)
-  final Map<ItemType, int> _cnt = {
-    ItemType.idea: 0,
-    ItemType.action: 0,
-  };
+  // contadores para generar IDs
+  final Map<ItemType, int> _cnt = {ItemType.idea: 0, ItemType.action: 0};
 
   // caché por id
   final Map<String, Item> _cache = {};
 
-  // notas (campo "tiempo") por id
+  // notas por id (el “tiempo” en texto)
   final Map<String, String> _notes = {};
 
-  // ===== getters ============================================================
+  // ===== getters
   List<Item> items(ItemType t) => List.unmodifiable(_items[t]!);
   List<Item> get all => _items.values.expand((e) => e).toList();
 
   Set<String> links(String id) => _links[id] ?? const <String>{};
+  String note(String id) => _notes[id] ?? '';
   Item? getItem(String id) => _cache[id];
 
-  String note(String id) => _notes[id] ?? '';
-
-  // ===== mutaciones =========================================================
+  // ===== CRUD
   void add(ItemType t, String text) {
     final v = text.trim();
     if (v.isEmpty) return;
-
     _cnt[t] = (_cnt[t] ?? 0) + 1;
-
-    // usa la config para prefijo de id
     final cfg = t == ItemType.idea ? ideasCfg : actionsCfg;
     final id = '${cfg.prefix}${_cnt[t]!.toString().padLeft(3, '0')}';
-
-    _items[t]!.insert(0, Item(id, v, t));
-    _reindex();
+    final it = Item(id, v, t);
+    _items[t]!.insert(0, it);
+    _cache[id] = it;
     notifyListeners();
   }
 
-  bool setStatus(String id, ItemStatus s) =>
-      _update(id, (it) => it.copyWith(status: s));
+  bool setStatus(String id, ItemStatus s) => _update(id, (it) {
+        final ns = it.status == s ? it.status : s;
+        final chg = ns != it.status;
+        return it.copyWith(
+          status: ns,
+          modifiedAt: chg ? DateTime.now() : it.modifiedAt,
+          statusChanges: chg ? it.statusChanges + 1 : it.statusChanges,
+        );
+      });
 
-  bool updateText(String id, String txt) => _update(
-        id,
-        (it) => Item(
-          it.id,
-          txt,
-          it.type,
-          it.status,
-          it.createdAt,
-          DateTime.now(),
-          it.statusChanges,
-        ),
-      );
+  bool updateText(String id, String txt) => _update(id, (it) => it.copyWith(text: txt, modifiedAt: DateTime.now()));
 
   void setNote(String id, String v) {
     _notes[id] = v;
@@ -73,10 +61,8 @@ class AppState extends ChangeNotifier {
 
   void toggleLink(String a, String b) {
     if (a == b || _cache[a] == null || _cache[b] == null) return;
-
     final sa = _links.putIfAbsent(a, () => <String>{});
     final sb = _links.putIfAbsent(b, () => <String>{});
-
     if (sa.remove(b)) {
       sb.remove(a);
       if (sa.isEmpty) _links.remove(a);
@@ -88,31 +74,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===== helpers internos ===================================================
+  // ===== helpers
   bool _update(String id, Item Function(Item) cb) {
     final it = _cache[id];
     if (it == null) return false;
-
     final L = _items[it.type]!;
     final i = L.indexWhere((e) => e.id == id);
     if (i < 0) return false;
-
-    L[i] = cb(it);
-    _reindex();
+    final ni = cb(it);
+    L[i] = ni;
+    _cache[id] = ni;
     notifyListeners();
     return true;
   }
 
-  void _reindex() {
-    _cache
-      ..clear()
-      ..addAll({for (final it in all) it.id: it});
-  }
-
-  // ===== importación total (reemplazo) ======================================
-  /// Reemplaza TODO el estado por el pasado (items, contadores, notas, links).
-  /// Asume que `links` ya viene normalizado (opcionalmente puedes pasar
-  /// unidireccional y se mantendrá tal cual).
+  // ===== reemplazo total (import)
   void replaceAll({
     required List<Item> items,
     required Map<ItemType, int> counters,
@@ -124,14 +100,12 @@ class AppState extends ChangeNotifier {
 
     for (final it in items) {
       _items[it.type]!.add(it);
+      _cache[it.id] = it;
     }
 
     _cnt
       ..clear()
-      ..addAll({
-        ItemType.idea: counters[ItemType.idea] ?? 0,
-        ItemType.action: counters[ItemType.action] ?? 0,
-      });
+      ..addAll({ItemType.idea: counters[ItemType.idea] ?? 0, ItemType.action: counters[ItemType.action] ?? 0});
 
     _notes
       ..clear()
@@ -141,7 +115,6 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll(links);
 
-    _reindex();
     notifyListeners();
   }
 }
