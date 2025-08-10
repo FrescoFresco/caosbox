@@ -20,10 +20,12 @@ bool _matchText(Item it, AppState st, TextClause c) {
     return false;
   }
 
+  // Excluyentes primero
   for (final t in c.tokens.where((t) => t.mode == Tri.exclude)) {
     final tok = t.t.trim();
     if (tok.isNotEmpty && inAny(tok)) return false;
   }
+  // Inclusivos: deben cumplirse todos
   for (final t in c.tokens.where((t) => t.mode != Tri.exclude)) {
     final tok = t.t.trim();
     if (tok.isNotEmpty && !inAny(tok)) return false;
@@ -34,6 +36,7 @@ bool _matchText(Item it, AppState st, TextClause c) {
 List<Item> applySearch(AppState st, List<Item> source, SearchSpec spec) {
   Iterable<Item> items = source;
 
+  // 1) Filtrado por cláusulas
   for (final clause in spec.clauses) {
     if (clause is EnumClause) {
       final inc = clause.include, exc = clause.exclude;
@@ -62,25 +65,33 @@ List<Item> applySearch(AppState st, List<Item> source, SearchSpec spec) {
     }
   }
 
-  // ranking simple: contenido (4), nota (2), id (1). Empate: modifiedAt desc
-  int score(Item it, TextClause? tc) {
-    if (tc == null) return 0;
+  final L = items.toList();
+
+  // 2) Orden: si NO hay cláusulas de texto → modifiedAt desc
+  final textClauses = spec.clauses.whereType<TextClause>().toList();
+  if (textClauses.isEmpty) {
+    L.sort((a, b) => b.modifiedAt.compareTo(a.modifiedAt));
+    return L;
+  }
+
+  // Si hay texto, sumar score de TODAS las TextClause
+  int score(Item it) {
     int s = 0;
-    for (final t in tc.tokens.where((t) => t.mode == Tri.include)) {
-      final tok = t.t;
-      if (_has(it.text, tok)) s += 4;
-      if (_has(st.note(it.id), tok)) s += 2;
-      if (_has(it.id, tok)) s += 1;
+    for (final tc in textClauses) {
+      for (final t in tc.tokens.where((t) => t.mode == Tri.include)) {
+        final tok = t.t;
+        if (_has(it.text, tok)) s += 4;
+        if (_has(st.note(it.id), tok)) s += 2;
+        if (_has(it.id, tok)) s += 1;
+      }
     }
     return s;
   }
 
-  final firstText = spec.clauses.whereType<TextClause>().isEmpty ? null : spec.clauses.whereType<TextClause>().first;
-  final L = items.toList();
   L.sort((a, b) {
-    final sa = score(a, firstText), sb = score(b, firstText);
-    if (sa != sb) return sb.compareTo(sa);
-    return b.modifiedAt.compareTo(a.modifiedAt);
+    final sa = score(a), sb = score(b);
+    if (sa != sb) return sb.compareTo(sa); // mayor score primero
+    return b.modifiedAt.compareTo(a.modifiedAt); // empate: más reciente primero
   });
   return L;
 }
