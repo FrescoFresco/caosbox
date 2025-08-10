@@ -20,6 +20,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
     final st = widget.st;
     final all = st.all;
 
+    // IZQUIERDA: selección del elemento (checkbox en la DERECHA)
     Widget listLeft(List<Item> src) => ListView.builder(
       itemCount: src.length,
       itemBuilder: (_, i) {
@@ -33,13 +34,14 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
           onInfo: () => showInfoModal(c, it, st),
           swipeable: false,
           checkbox: true,
-          checkboxLeading: true,
+          checkboxLeading: false,  // <-- ahora a la DERECHA
           checked: ck,
           onChecked: (_) => setState(() => sel = ck ? null : it.id),
         );
       },
     );
 
+    // DERECHA: conectar con (checkbox en la IZQUIERDA)
     Widget listRight(List<Item> src) => ListView.builder(
       itemCount: src.length,
       itemBuilder: (_, i) {
@@ -53,7 +55,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
           onInfo: () => showInfoModal(c, it, st),
           swipeable: false,
           checkbox: true,
-          checkboxLeading: false,
+          checkboxLeading: true,   // <-- ahora a la IZQUIERDA
           checked: ck,
           onChecked: (_) => setState(() { if (sel != null) st.toggleLink(sel!, it.id); }),
         );
