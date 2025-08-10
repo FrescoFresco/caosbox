@@ -30,20 +30,19 @@ class GenericScreen extends StatefulWidget {
 
 class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveClientMixin {
   final _ex = <String>{};
-  late final SearchController _sc; // <-- nativo Flutter M3
+  late final SearchController _sc; // M3 nativo
 
   @override
   void initState() {
     super.initState();
-    _sc = SearchController(text: widget.quickQuery);
-    // Menos código: escuchamos cambios del SearchController una sola vez
+    _sc = SearchController();                // <-- ctor sin 'text'
+    _sc.text = widget.quickQuery;            // <-- set explícito
     _sc.addListener(() => widget.onQuickQuery(_sc.text));
   }
 
   @override
   void didUpdateWidget(covariant GenericScreen old) {
     super.didUpdateWidget(old);
-    // Si quickQuery cambió “desde fuera”, sincronizamos el SearchController
     if (old.quickQuery != widget.quickQuery && _sc.text != widget.quickQuery) {
       _sc.text = widget.quickQuery;
       _sc.selection = TextSelection.collapsed(offset: _sc.text.length);
@@ -70,11 +69,10 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        // 🔎 Reemplazado por SearchAnchor.bar (nativo)
+        // 🔎 SearchAnchor.bar nativo
         SearchAnchor.bar(
           searchController: _sc,
           barHintText: 'Buscar… (usa -palabra para excluir)',
-          // icono lupa y botón de filtros DENTRO de la barra (menos líneas/row)
           barLeading: const Icon(Icons.search),
           barTrailing: [
             IconButton(
@@ -82,9 +80,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
               tooltip: 'Filtrado avanzado',
               onPressed: () => widget.onOpenFilters(),
             ),
-            // botón clear ya viene integrado al escribir
           ],
-          // Sugerencias nativas (overlay). Tomamos los 6 primeros resultados de la propia búsqueda.
           suggestionsBuilder: (context, controller) {
             final quick = controller.text;
             final spec = _mergeQuick(widget.spec, quick);
@@ -95,7 +91,6 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
               title: Text(it.text, maxLines: 1, overflow: TextOverflow.ellipsis),
               subtitle: Text(it.id),
               onTap: () {
-                // al tocar sugerencia, fijamos el texto (p.ej. ID) y cerramos overlay
                 controller.text = it.id;
                 widget.onQuickQuery(controller.text);
                 controller.closeView(it.id);
@@ -127,7 +122,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
     );
   }
 
-  // Igual que antes: combinamos filtros avanzados + 🔎 rápida (tokens; -palabra = exclude)
+  // Combina filtros avanzados + 🔎 rápida (tokens; -palabra = exclude)
   SearchSpec _mergeQuick(SearchSpec base, String q) {
     final parts = q.trim().isEmpty ? <String>[] : q.trim().split(RegExp(r'\s+'));
     final tokens = parts.map((p) {
