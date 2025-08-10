@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../state/app_state.dart';
 import '../../models/item.dart';
+import '../widgets/item_tile.dart';
 import 'info_modal.dart';
 
 class LinksBlock extends StatefulWidget {
@@ -19,44 +20,73 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
     final st = widget.st;
     final all = st.all;
 
-    Widget list(List<Item> src, {required bool right}) => ListView.builder(
+    Widget listLeft(List<Item> src) => ListView.builder(
       itemCount: src.length,
       itemBuilder: (_, i) {
         final it = src[i];
-        final ck = right && sel != null ? st.links(sel!).contains(it.id) : (sel == it.id);
-        return CheckboxListTile(
-          value: ck,
-          onChanged: (_) {
-            setState(() {
-              if (!right) {
-                sel = sel == it.id ? null : it.id;
-              } else if (sel != null) {
-                st.toggleLink(sel!, it.id);
-              }
-            });
-          },
-          title: Text('${it.id} — ${it.text}', maxLines: 1, overflow: TextOverflow.ellipsis),
-          controlAffinity: ListTileControlAffinity.leading,
-          secondary: IconButton(icon: const Icon(Icons.info_outline), onPressed: () => showInfoModal(c, it, st)),
+        final ck = sel == it.id;
+        return ItemTile(
+          item: it,
+          st: st,
+          expanded: false,
+          onTap: () => setState(() => sel = ck ? null : it.id),
+          onInfo: () => showInfoModal(c, it, st),
+          swipeable: false,
+          checkbox: true,
+          checkboxLeading: true,
+          checked: ck,
+          onChecked: (_) => setState(() => sel = ck ? null : it.id),
         );
       },
     );
 
-    final left = list(all, right: false);
-    final rightList = sel == null ? const Center(child: Text('Selecciona un elemento')) : list(all.where((x) => x.id != sel).toList(), right: true);
+    Widget listRight(List<Item> src) => ListView.builder(
+      itemCount: src.length,
+      itemBuilder: (_, i) {
+        final it = src[i];
+        final ck = sel != null && st.links(sel!).contains(it.id);
+        return ItemTile(
+          item: it,
+          st: st,
+          expanded: false,
+          onTap: () {}, // sin expand en este panel
+          onInfo: () => showInfoModal(c, it, st),
+          swipeable: false,
+          checkbox: true,
+          checkboxLeading: false, // a la derecha
+          checked: ck,
+          onChecked: (_) => setState(() { if (sel != null) st.toggleLink(sel!, it.id); }),
+        );
+      },
+    );
+
+    final rightData = sel == null ? <Item>[] : all.where((x) => x.id != sel).toList();
 
     return Column(children: [
-      const Padding(padding: EdgeInsets.fromLTRB(12, 12, 12, 8), child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold))),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(12, 12, 12, 8),
+        child: Text('Conectar elementos', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
       Expanded(
         child: Row(children: [
           Expanded(child: Column(children: [
-            const Padding(padding: EdgeInsets.only(left: 12, bottom: 8), child: Align(alignment: Alignment.centerLeft, child: Text('Seleccionar:'))),
-            Expanded(child: left),
+            const Padding(
+              padding: EdgeInsets.only(left: 12, bottom: 8),
+              child: Align(alignment: Alignment.centerLeft, child: Text('Seleccionar:')),
+            ),
+            Expanded(child: listLeft(all)),
           ])),
           const VerticalDivider(width: 1),
           Expanded(child: Column(children: [
-            const Padding(padding: EdgeInsets.only(left: 12, bottom: 8), child: Align(alignment: Alignment.centerLeft, child: Text('Conectar con:'))),
-            Expanded(child: rightList),
+            const Padding(
+              padding: EdgeInsets.only(left: 12, bottom: 8),
+              child: Align(alignment: Alignment.centerLeft, child: Text('Conectar con:')),
+            ),
+            Expanded(
+              child: sel == null
+                ? const Center(child: Text('Selecciona un elemento'))
+                : listRight(rightData),
+            ),
           ])),
         ]),
       ),
