@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 class SearchBarRow extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onOpenFilters;
-  final VoidCallback onExportData;   // nuevo
-  final VoidCallback onImportData;   // nuevo
+  final VoidCallback onExportData;   // exportar DATOS
+  final VoidCallback onImportData;   // importar DATOS
   final String hint;
 
   const SearchBarRow({
@@ -45,7 +45,11 @@ class _SearchBarRowState extends State<SearchBarRow> {
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search),
             suffixIcon: c.text.isNotEmpty
-                ? IconButton(icon: const Icon(Icons.clear), onPressed: c.clear)
+                ? IconButton(
+                    tooltip: 'Limpiar',
+                    icon: const Icon(Icons.clear),
+                    onPressed: c.clear,
+                  )
                 : null,
             hintText: widget.hint,
             isDense: true,
@@ -53,23 +57,23 @@ class _SearchBarRowState extends State<SearchBarRow> {
           ),
         ),
       ),
-      const SizedBox(width: 8),
-      OutlinedButton.icon(
+      const SizedBox(width: 6),
+      IconButton(
+        tooltip: 'Filtrar (avanzado)',
         onPressed: widget.onOpenFilters,
         icon: const Icon(Icons.tune),
-        label: const Text('Filtrar'),
       ),
-      const SizedBox(width: 8),
-      OutlinedButton.icon(
+      const SizedBox(width: 6),
+      IconButton(
+        tooltip: 'Exportar datos',
         onPressed: widget.onExportData,
         icon: const Icon(Icons.upload),
-        label: const Text('Exportar datos'),
       ),
-      const SizedBox(width: 8),
-      OutlinedButton.icon(
+      const SizedBox(width: 6),
+      IconButton(
+        tooltip: 'Importar datos',
         onPressed: widget.onImportData,
         icon: const Icon(Icons.download),
-        label: const Text('Importar datos'),
       ),
     ]);
   }
