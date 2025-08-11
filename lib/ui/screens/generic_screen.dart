@@ -1,6 +1,8 @@
+// lib/ui/screens/generic_screen.dart
 import 'package:flutter/material.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/models/item.dart';
+import 'package:caosbox/core/utils/tri.dart';             // ← IMPORTA Tri
 import 'package:caosbox/config/blocks.dart';
 import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/ui/widgets/item_tile.dart';
