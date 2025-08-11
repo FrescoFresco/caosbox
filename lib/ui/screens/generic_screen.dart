@@ -6,6 +6,7 @@ import 'info_modal.dart';
 
 import '../../search/search_models.dart';
 import '../../search/search_engine.dart';
+import '../../search/search_io.dart';              // para exportar/importar DATOS
 import '../widgets/search_bar_row.dart';
 
 class GenericScreen extends StatefulWidget {
@@ -72,6 +73,38 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
         SearchBarRow(
           controller: _q,
           onOpenFilters: () => widget.onOpenFilters(ctx),
+          onExportData: () {
+            final json = exportDataJson(widget.state);
+            _showLong(ctx, 'Datos (JSON)', json);
+          },
+          onImportData: () async {
+            final ctrl = TextEditingController();
+            final ok = await showDialog<bool>(
+              context: ctx,
+              builder: (dctx) => AlertDialog(
+                title: const Text('Importar datos (reemplaza)'),
+                content: TextField(
+                  controller: ctrl, maxLines: 14,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Pega aquí el JSON de datos…',
+                  ),
+                ),
+                actions: [
+                  TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
+                  FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
+                ],
+              ),
+            );
+            if (ok == true) {
+              try {
+                importDataJsonReplace(widget.state, ctrl.text);
+                if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Datos importados')));
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+              }
+            }
+          },
         ),
         const SizedBox(height: 8),
 
@@ -94,6 +127,17 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
           ),
         ),
       ]),
+    );
+  }
+
+  void _showLong(BuildContext context, String title, String text) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(width: 600, child: SelectableText(text)),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar'))],
+      ),
     );
   }
 
