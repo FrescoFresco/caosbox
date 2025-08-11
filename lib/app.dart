@@ -19,19 +19,22 @@ class _CaosAppState extends State<CaosApp> {
   SearchSpec spec = const SearchSpec(); // filtros avanzados
   String quickQuery = '';                // 🔎 rápida
 
-  @override void dispose() { st.dispose(); super.dispose(); }
+  @override
+  void dispose() {
+    st.dispose();
+    super.dispose();
+  }
 
-  Future<void> _openFilters() async {
-    // PASO CLAVE: trabajar con COPIA dentro del modal
-    final seed = spec.clone();
+  // Abre filtros usando el context de la pantalla que llama
+  Future<void> _openFilters(BuildContext ctx) async {
+    final seed = spec.clone(); // trabajar con copia en el modal
     final updated = await showModalBottomSheet<SearchSpec>(
-      context: context,
+      context: ctx,
       isScrollControlled: true,
       builder: (_) => FiltersSheet(initial: seed, state: st),
     );
     if (updated != null) {
-      // Guardar copia limpia para evitar referencias colgantes
-      setState(() => spec = updated.clone());
+      setState(() => spec = updated.clone()); // guardar copia limpia
     }
   }
 
@@ -71,7 +74,7 @@ class _CaosAppState extends State<CaosApp> {
                                   spec: spec,
                                   quickQuery: quickQuery,
                                   onQuickQuery: (q) => setState(() => quickQuery = q),
-                                  onOpenFilters: _openFilters,
+                                  onOpenFilters: _openFilters, // pasa función que recibe ctx
                                 )
                               : bb.custom!(context, st),
                       ],
@@ -116,7 +119,10 @@ class _CaosAppState extends State<CaosApp> {
             ]),
             const SizedBox(height: 8),
             TextField(
-              controller: c, autofocus: true, minLines: 1, maxLines: 8,
+              controller: c,
+              autofocus: true,
+              minLines: 1,
+              maxLines: 8,
               decoration: InputDecoration(
                 hintText: type == ItemType.idea ? 'Escribe tu idea...' : 'Describe la acción...',
                 border: const OutlineInputBorder(),
@@ -157,27 +163,52 @@ class _FiltersSheetState extends State<FiltersSheet> {
   @override
   void initState() {
     super.initState();
-    // Trabajar SIEMPRE con clones locales
+    // trabajar SIEMPRE con clones locales
     clauses = widget.initial.clauses.map((c) => c.clone()).toList();
   }
 
   void _addBlock() async {
-    await showModalBottomSheet(context: context, builder: (_) {
-      return SafeArea(child: Wrap(children: [
-        ListTile(title: const Text('Bloque: Tipo (enum)'),
-          leading: const Icon(Icons.category),
-          onTap: (){ setState(()=>clauses.add(EnumClause(field:'type'))); Navigator.pop(context); }),
-        ListTile(title: const Text('Bloque: Estado (enum)'),
-          leading: const Icon(Icons.flag),
-          onTap: (){ setState(()=>clauses.add(EnumClause(field:'status'))); Navigator.pop(context); }),
-        ListTile(title: const Text('Bloque: Relaciones (hasLinks)'),
-          leading: const Icon(Icons.link),
-          onTap: (){ setState(()=>clauses.add(EnumClause(field:'hasLinks'))); Navigator.pop(context); }),
-        ListTile(title: const Text('Bloque: Texto'),
-          leading: const Icon(Icons.text_fields),
-          onTap: (){ setState(()=>clauses.add(TextClause())); Navigator.pop(context); }),
-      ]));
-    });
+    await showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Wrap(children: [
+            ListTile(
+              title: const Text('Bloque: Tipo (enum)'),
+              leading: const Icon(Icons.category),
+              onTap: () {
+                setState(() => clauses.add(EnumClause(field: 'type')));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Bloque: Estado (enum)'),
+              leading: const Icon(Icons.flag),
+              onTap: () {
+                setState(() => clauses.add(EnumClause(field: 'status')));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Bloque: Relaciones (hasLinks)'),
+              leading: const Icon(Icons.link),
+              onTap: () {
+                setState(() => clauses.add(EnumClause(field: 'hasLinks')));
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Bloque: Texto'),
+              leading: const Icon(Icons.text_fields),
+              onTap: () {
+                setState(() => clauses.add(TextClause()));
+                Navigator.pop(context);
+              },
+            ),
+          ]),
+        );
+      },
+    );
   }
 
   @override
@@ -189,18 +220,18 @@ class _FiltersSheetState extends State<FiltersSheet> {
         builder: (_, controller) => Material(
           child: Column(children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16,12,8,8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
               child: Row(children: [
                 const Text('Filtrar / Buscar (avanzado)', style: TextStyle(fontWeight: FontWeight.bold)),
                 const Spacer(),
                 TextButton.icon(onPressed: _addBlock, icon: const Icon(Icons.add), label: const Text('Añadir bloque')),
                 const SizedBox(width: 8),
-                OutlinedButton(onPressed: ()=>setState(()=>clauses.clear()), child: const Text('Limpiar')),
+                OutlinedButton(onPressed: () => setState(() => clauses.clear()), child: const Text('Limpiar')),
                 const SizedBox(width: 8),
                 FilledButton(
-                  onPressed: ()=>Navigator.pop(
+                  onPressed: () => Navigator.pop(
                     context,
-                    SearchSpec(clauses: clauses.map((c)=>c.clone()).toList()), // devolver COPIA
+                    SearchSpec(clauses: clauses.map((c) => c.clone()).toList()), // devolver COPIA
                   ),
                   child: const Text('Aplicar'),
                 ),
@@ -238,20 +269,27 @@ class _FiltersSheetState extends State<FiltersSheet> {
                       label: const Text('Pegar JSON y Cargar'),
                       onPressed: () async {
                         final ctrl = TextEditingController();
-                        final ok = await showDialog<bool>(context: context, builder: (ctx) {
-                          return AlertDialog(
-                            title: const Text('Pega la búsqueda (JSON)'),
-                            content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder())),
-                            actions: [
-                              TextButton(onPressed: ()=>Navigator.pop(ctx,false), child: const Text('Cancelar')),
-                              FilledButton(onPressed: ()=>Navigator.pop(ctx,true), child: const Text('Cargar')),
-                            ],
-                          );
-                        });
+                        final ok = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('Pega la búsqueda (JSON)'),
+                              content: TextField(
+                                controller: ctrl,
+                                maxLines: 14,
+                                decoration: const InputDecoration(border: OutlineInputBorder()),
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cargar')),
+                              ],
+                            );
+                          },
+                        );
                         if (ok == true) {
                           try {
                             final spec = importQueryJson(ctrl.text);
-                            setState(() => clauses = [...spec.clauses.map((c)=>c.clone())]); // cargar como clones
+                            setState(() => clauses = [...spec.clauses.map((c) => c.clone())]); // clones
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Búsqueda cargada')));
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -277,16 +315,26 @@ class _FiltersSheetState extends State<FiltersSheet> {
                       label: const Text('Importar datos (reemplazar)'),
                       onPressed: () async {
                         final ctrl = TextEditingController();
-                        final ok = await showDialog<bool>(context: context, builder: (ctx) {
-                          return AlertDialog(
-                            title: const Text('Importar datos (reemplazo)'),
-                            content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-                            actions: [
-                              TextButton(onPressed: ()=>Navigator.pop(ctx,false), child: const Text('Cancelar')),
-                              FilledButton(onPressed: ()=>Navigator.pop(ctx,true), child: const Text('Importar')),
-                            ],
-                          );
-                        });
+                        final ok = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('Importar datos (reemplazo)'),
+                              content: TextField(
+                                controller: ctrl,
+                                maxLines: 14,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  hintText: 'Pega aquí el JSON de datos…',
+                                ),
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Importar')),
+                              ],
+                            );
+                          },
+                        );
                         if (ok == true) {
                           try {
                             importDataJsonReplace(widget.state, ctrl.text);
@@ -309,13 +357,16 @@ class _FiltersSheetState extends State<FiltersSheet> {
   }
 
   void _showLongText(BuildContext context, String title, String text) {
-    showDialog(context: context, builder: (ctx) {
-      return AlertDialog(
-        title: Text(title),
-        content: SizedBox(width: 600, child: SelectableText(text)),
-        actions: [TextButton(onPressed: ()=>Navigator.pop(ctx), child: const Text('Cerrar'))],
-      );
-    });
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(title),
+          content: SizedBox(width: 600, child: SelectableText(text)),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar'))],
+        );
+      },
+    );
   }
 }
 
@@ -341,7 +392,7 @@ class _ClauseEditorState extends State<_ClauseEditor> {
           title: Text(_title(c)),
           subtitle: Text(_summary(c)),
           trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-            IconButton(onPressed: ()=>setState(()=>open=!open), icon: Icon(open?Icons.expand_less:Icons.expand_more)),
+            IconButton(onPressed: () => setState(() => open = !open), icon: Icon(open ? Icons.expand_less : Icons.expand_more)),
             IconButton(onPressed: widget.onRemove, icon: const Icon(Icons.close)),
           ]),
         ),
@@ -377,62 +428,74 @@ class _ClauseEditorState extends State<_ClauseEditor> {
         'hasLinks' => ['true'],
         _ => <String>[],
       };
-      return Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final v in values)
-          _TriPill(
-            label: v,
-            mode: _currentMode(c, v),
-            onTap: () {
-              final next = _next(_currentMode(c, v));
-              setState(() {
-                _setMode(c, v, next);
-                widget.onUpdate(c);
-              });
-            },
-          ),
-      ]);
-    } else if (c is TextClause) {
-      final ctrl = TextEditingController(text: c.tokens.map((t) => (t.mode == Tri.exclude ? '-' : '') + t.t).join(' '));
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Consulta (tokens; usa "-" para excluir)'),
-        const SizedBox(height: 6),
-        TextField(controller: ctrl, minLines: 1, maxLines: 3, decoration: const InputDecoration(border: OutlineInputBorder())),
-        const SizedBox(height: 10),
-        const Text('Alcances'),
-        const SizedBox(height: 6),
-        Wrap(spacing: 8, children: [
-          for (final k in ['id', 'content', 'note'])
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final v in values)
             _TriPill(
-              label: k,
-              mode: c.fields[k] ?? Tri.off,
+              label: v,
+              mode: _currentMode(c, v),
               onTap: () {
-                final next = _next(c.fields[k] ?? Tri.off);
+                final next = _next(_currentMode(c, v));
                 setState(() {
-                  c.fields[k] = next;
+                  _setMode(c, v, next);
                   widget.onUpdate(c);
                 });
               },
             ),
-        ]),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerRight,
-          child: ElevatedButton(
-            onPressed: () {
-              final raw = ctrl.text.trim();
-              final parts = raw.isEmpty ? <String>[] : raw.split(RegExp(r'\s+'));
-              c.tokens
-                ..clear()
-                ..addAll(parts.map((p) {
-                  if (p.startsWith('-') && p.length > 1) return Token(p.substring(1), Tri.exclude);
-                  return Token(p, Tri.include);
-                }));
-              widget.onUpdate(c);
-            },
-            child: const Text('Aplicar texto'),
+        ],
+      );
+    } else if (c is TextClause) {
+      final ctrl = TextEditingController(
+        text: c.tokens.map((t) => (t.mode == Tri.exclude ? '-' : '') + t.t).join(' '),
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Consulta (tokens; usa "-" para excluir)'),
+          const SizedBox(height: 6),
+          TextField(controller: ctrl, minLines: 1, maxLines: 3, decoration: const InputDecoration(border: OutlineInputBorder())),
+          const SizedBox(height: 10),
+          const Text('Alcances'),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final k in ['id', 'content', 'note'])
+                _TriPill(
+                  label: k,
+                  mode: c.fields[k] ?? Tri.off,
+                  onTap: () {
+                    final next = _next(c.fields[k] ?? Tri.off);
+                    setState(() {
+                      c.fields[k] = next;
+                      widget.onUpdate(c);
+                    });
+                  },
+                ),
+            ],
           ),
-        ),
-      ]);
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () {
+                final raw = ctrl.text.trim();
+                final parts = raw.isEmpty ? <String>[] : raw.split(RegExp(r'\s+'));
+                c.tokens
+                  ..clear()
+                  ..addAll(parts.map((p) {
+                    if (p.startsWith('-') && p.length > 1) return Token(p.substring(1), Tri.exclude);
+                    return Token(p, Tri.include);
+                  }));
+                widget.onUpdate(c);
+              },
+              child: const Text('Aplicar texto'),
+            ),
+          ),
+        ],
+      );
     }
     return const SizedBox.shrink();
   }
@@ -468,7 +531,11 @@ class _TriPill extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(color: bg, border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(999)),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: Colors.black26),
+          borderRadius: BorderRadius.circular(999),
+        ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (mode == Tri.include) const Icon(Icons.check, size: 14),
           if (mode == Tri.exclude) const Icon(Icons.block, size: 14),
