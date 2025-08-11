@@ -1,3 +1,4 @@
+// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:caosbox/models/enums.dart';
 import 'config/blocks.dart';
@@ -14,7 +15,7 @@ class CaosApp extends StatefulWidget {
 class _CaosAppState extends State<CaosApp> {
   final st = AppState();
 
-  // Estado de búsqueda por pestaña (por tipo)
+  // Buscadores independientes por pestaña
   final Map<ItemType, SearchSpec> _specs = {
     ItemType.idea: const SearchSpec(),
     ItemType.action: const SearchSpec(),
@@ -196,6 +197,9 @@ class _FiltersSheetState extends State<FiltersSheet>{
 
   @override
   Widget build(BuildContext context){
+    // ⬇️ Filtramos la cláusula hasLinks para NO mostrar su bloque (se gestiona dentro de "Tipo")
+    final visible = clauses.where((c) => !(c is EnumClause && c.field == 'hasLinks')).toList();
+
     return SafeArea(
       child: DraggableScrollableSheet(
         expand:false, initialChildSize:.9,
@@ -220,14 +224,20 @@ class _FiltersSheetState extends State<FiltersSheet>{
             ),
             const Divider(height:1),
             Expanded(child: ListView(controller:ctrl,padding:const EdgeInsets.all(12), children:[
-              for(int i=0;i<clauses.length;i++)
-                Padding(padding:const EdgeInsets.only(bottom:12), child:_ClauseEditor(
-                  clause:clauses[i],
-                  onRemove:()=>setState(()=>clauses.removeAt(i)),
-                  onUpdate:(nc)=>setState(()=>clauses[i]=nc),
-                  readHasLinks:_readHasLinks,
-                  writeHasLinks:_writeHasLinks,
-                )),
+              for(final c in visible)
+                Padding(
+                  padding:const EdgeInsets.only(bottom:12),
+                  child:_ClauseEditor(
+                    clause:c,
+                    onRemove:()=>setState(()=>clauses.remove(c)), // elimina del origen
+                    onUpdate:(nc){
+                      final idx = clauses.indexOf(c);
+                      if(idx!=-1) setState(()=>clauses[idx]=nc);
+                    },
+                    readHasLinks:_readHasLinks,
+                    writeHasLinks:_writeHasLinks,
+                  ),
+                ),
             ])),
           ]),
         ),
@@ -283,7 +293,7 @@ class _ClauseEditorState extends State<_ClauseEditor>{
   Widget _body(Clause c){
     if(c is EnumClause){
       if(c.field=='type'){
-        // chips de tipo (idea / action)
+        // chips: idea / acción
         final values = ['idea','action'];
         final chipsTipo = values.map((v)=>_TriPill(
           label:v, mode:_mode(c,v),
@@ -296,7 +306,7 @@ class _ClauseEditorState extends State<_ClauseEditor>{
           },
         ));
 
-        // chip único de relación: "Enlaces" (off/include/exclude)
+        // chip único: Enlaces (off/include/exclude)
         final hl = widget.readHasLinks?.call();
         final mode = hl==null ? Tri.off : _mode(hl,'true');
         final chipEnlaces = _TriPill(
@@ -310,15 +320,15 @@ class _ClauseEditorState extends State<_ClauseEditor>{
               if(next==Tri.include) nv.include.add('true'); // con enlaces
               if(next==Tri.exclude) nv.exclude.add('true'); // sin enlaces
             }
-            widget.writeHasLinks?.call(nv); // crea/actualiza/elimina la cláusula
-            setState((){});                 // refresca subtítulo
+            widget.writeHasLinks?.call(nv);
+            setState((){});
           },
         );
 
         return Wrap(spacing:8,runSpacing:8,children:[...chipsTipo, const SizedBox(width:16), chipEnlaces]);
       }
 
-      // Estado (enum) o (hasLinks si viene en JSON importado)
+      // Estado (enum) o (hasLinks si viene importado)
       final values = switch(c.field){ 'status'=>['normal','completed','archived'], 'hasLinks'=>['true'], _=> <String>[] };
       return Wrap(spacing:8,runSpacing:8,children:[
         for(final v in values)
