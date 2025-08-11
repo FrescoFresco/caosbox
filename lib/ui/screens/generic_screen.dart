@@ -4,6 +4,7 @@ import '../../config/blocks.dart';
 import '../../state/app_state.dart';
 import '../widgets/item_tile.dart';
 import 'info_modal.dart';
+import 'package:caosbox/models/item.dart';
 
 import '../../search/search_models.dart';
 import '../../search/search_engine.dart';
