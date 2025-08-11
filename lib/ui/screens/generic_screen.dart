@@ -13,7 +13,7 @@ class GenericScreen extends StatefulWidget {
   final SearchSpec spec;                 // filtros avanzados
   final String quickQuery;               // texto de la lupa
   final ValueChanged<String> onQuickQuery;
-  final Future<void> Function() onOpenFilters;
+  final Future<void> Function(BuildContext) onOpenFilters; // <-- recibe context
 
   const GenericScreen({
     super.key,
@@ -35,8 +35,8 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
   @override
   void initState() {
     super.initState();
-    _sc = SearchController();                // <-- ctor sin 'text'
-    _sc.text = widget.quickQuery;            // <-- set explícito
+    _sc = SearchController();
+    _sc.text = widget.quickQuery;
     _sc.addListener(() => widget.onQuickQuery(_sc.text));
   }
 
@@ -78,7 +78,11 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
             IconButton(
               icon: const Icon(Icons.tune),
               tooltip: 'Filtrado avanzado',
-              onPressed: () => widget.onOpenFilters(),
+              onPressed: () async {
+                // Cierra overlay de sugerencias antes de abrir el modal
+                _sc.closeView(null);
+                await widget.onOpenFilters(ctx); // usa el context de la pantalla
+              },
             ),
           ],
           suggestionsBuilder: (context, controller) {
