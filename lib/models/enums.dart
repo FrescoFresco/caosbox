@@ -11,5 +11,8 @@ extension ItemStatusName on ItemStatus {
       };
 }
 
-IconData typeIcon(ItemType t) => t == ItemType.idea ? Icons.lightbulb : Icons.assignment;
-String typeLabel(ItemType t) => t == ItemType.idea ? 'Ideas' : 'Acciones';
+IconData typeIcon(ItemType t) =>
+    t == ItemType.idea ? Icons.lightbulb : Icons.assignment;
+
+String typeLabel(ItemType t) =>
+    t == ItemType.idea ? 'Ideas' : 'Acciones';
