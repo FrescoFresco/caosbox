@@ -4,7 +4,9 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/theme/style.dart';
-import 'package:caosbox/ui/widgets/relation_picker.dart';
+
+import 'package:caosbox/ui/widgets/items_block.dart';
+import 'package:caosbox/domain/search/search_models.dart';
 
 String lbl(ItemType t) => t == ItemType.idea ? 'Idea' : 'Acción';
 IconData ico(ItemType t) => t == ItemType.idea ? Icons.lightbulb : Icons.assignment;
@@ -13,7 +15,7 @@ void showInfoModal(BuildContext c, Item it, AppState s) {
   showModalBottomSheet(context: c, isScrollControlled: true, useSafeArea: true, builder: (_) => InfoModal(id: it.id, st: s));
 }
 
-class InfoModal extends StatefulWidget {
+class InfoModal extends StatefulWidget{
   final String id; final AppState st;
   const InfoModal({super.key, required this.id, required this.st});
   @override State<InfoModal> createState()=>_InfoModalState();
@@ -49,8 +51,6 @@ class _InfoModalState extends State<InfoModal>{
                 child: Row(children: [
                   Icon(ico(cur.type)), const SizedBox(width: 8),
                   Expanded(child: Text('${lbl(cur.type)} • ${cur.id}', style: Style.title, overflow: TextOverflow.ellipsis)),
-                  if (cur.status != ItemStatus.normal)
-                    Padding(padding: const EdgeInsets.only(right: 4), child: Chip(label: Text(cur.status.name), visualDensity: VisualDensity.compact)),
                   IconButton(tooltip: 'Cerrar', icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
                 ]),
               ),
@@ -72,8 +72,19 @@ class _InfoModalState extends State<InfoModal>{
                     onChanged: (t) { _deb?.cancel(); _deb = Timer(const Duration(milliseconds: 250), ()=>widget.st.updateText(cur.id, t)); },
                   ),
                 ),
-                // Relacionado (1 panel, anclado a cur.id, checkbox a la derecha)
-                RelationPicker(state: widget.st, twoPane: false, anchorId: cur.id),
+                // Relacionado: mismo buscador único (sin filtros ni IO), link con checkbox a la derecha
+                ItemsBlock(
+                  state: widget.st,
+                  types: null,
+                  spec: const SearchSpec(),
+                  quickQuery: '',
+                  onQuickQuery: (_){},
+                  onOpenFilters: (){},      // oculto (no se muestra)
+                  showComposer: false,
+                  mode: ItemsBlockMode.link,
+                  anchorId: cur.id,
+                  checkboxSide: CheckboxSide.right,
+                ),
                 // Tiempo
                 Padding(
                   padding: const EdgeInsets.all(16),
