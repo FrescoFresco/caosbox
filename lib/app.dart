@@ -13,17 +13,28 @@ class CaosApp extends StatefulWidget {
 
 class _CaosAppState extends State<CaosApp> {
   final st = AppState();
-  SearchSpec spec = const SearchSpec();
-  String quickQuery = '';
+
+  // Estado de búsqueda por pestaña (por tipo)
+  final Map<ItemType, SearchSpec> _specs = {
+    ItemType.idea: const SearchSpec(),
+    ItemType.action: const SearchSpec(),
+  };
+  final Map<ItemType, String> _queries = {
+    ItemType.idea: '',
+    ItemType.action: '',
+  };
+
   @override void dispose(){ st.dispose(); super.dispose(); }
 
-  Future<void> _openFilters(BuildContext ctx) async {
-    final seed = spec.clone();
+  Future<void> _openFilters(BuildContext ctx, ItemType type) async {
+    final seed = (_specs[type] ?? const SearchSpec()).clone();
     final updated = await showModalBottomSheet<SearchSpec>(
       context: ctx, isScrollControlled: true,
       builder: (_) => FiltersSheet(initial: seed, state: st),
     );
-    if (updated != null) setState(() => spec = updated.clone());
+    if (updated != null) {
+      setState(()=> _specs[type] = updated.clone());
+    }
   }
 
   @override
@@ -35,9 +46,9 @@ class _CaosAppState extends State<CaosApp> {
         length: blocks.length,
         child: _HomeScaffold(
           st: st,
-          spec: spec,
-          quickQuery: quickQuery,
-          onQuickQuery: (q) => setState(()=>quickQuery=q),
+          getSpec: (t)=> _specs[t] ?? const SearchSpec(),
+          getQuery: (t)=> _queries[t] ?? '',
+          setQuery: (t,q)=> setState(()=> _queries[t]=q),
           onOpenFilters: _openFilters,
         ),
       ),
@@ -48,11 +59,19 @@ class _CaosAppState extends State<CaosApp> {
 /* ---------- Scaffold bajo el DefaultTabController ---------- */
 class _HomeScaffold extends StatefulWidget {
   final AppState st;
-  final SearchSpec spec;
-  final String quickQuery;
-  final ValueChanged<String> onQuickQuery;
-  final Future<void> Function(BuildContext) onOpenFilters;
-  const _HomeScaffold({required this.st,required this.spec,required this.quickQuery,required this.onQuickQuery,required this.onOpenFilters});
+  final SearchSpec Function(ItemType) getSpec;
+  final String Function(ItemType) getQuery;
+  final void Function(ItemType,String) setQuery;
+  final Future<void> Function(BuildContext, ItemType) onOpenFilters;
+
+  const _HomeScaffold({
+    required this.st,
+    required this.getSpec,
+    required this.getQuery,
+    required this.setQuery,
+    required this.onOpenFilters,
+  });
+
   @override State<_HomeScaffold> createState()=>_HomeScaffoldState();
 }
 class _HomeScaffoldState extends State<_HomeScaffold>{
@@ -72,8 +91,12 @@ class _HomeScaffoldState extends State<_HomeScaffold>{
         for(final b in blocks)
           b.type!=null
             ? GenericScreen(
-                block:b, state:widget.st, spec:widget.spec, quickQuery:widget.quickQuery,
-                onQuickQuery:widget.onQuickQuery, onOpenFilters:widget.onOpenFilters,
+                block:b,
+                state:widget.st,
+                spec: widget.getSpec(b.type!),
+                quickQuery: widget.getQuery(b.type!),
+                onQuickQuery:(q)=>widget.setQuery(b.type!, q),
+                onOpenFilters:(ctx, t)=>widget.onOpenFilters(ctx, t),
               )
             : b.custom!(context, widget.st),
       ])),
@@ -125,11 +148,31 @@ class _FiltersSheetState extends State<FiltersSheet>{
       context: context, builder: (_)=>SafeArea(child: Wrap(children:[
         ListTile(leading:const Icon(Icons.category),    title:const Text('Tipo (enum)'),   onTap:(){Navigator.pop(context,'type');}),
         ListTile(leading:const Icon(Icons.flag),        title:const Text('Estado (enum)'), onTap:(){Navigator.pop(context,'status');}),
-        ListTile(leading:const Icon(Icons.link),        title:const Text('Relación'),      onTap:(){Navigator.pop(context,'hasLinks');}),
+        // ⚠️ Eliminado: opción separada de "Relación"
         ListTile(leading:const Icon(Icons.text_fields), title:const Text('Texto'),         onTap:(){Navigator.pop(context,'text');}),
       ])));
     if(chose==null) return;
     setState(()=>clauses.add(chose=='text'?TextClause():EnumClause(field:chose)));
+  }
+
+  // helpers para leer/escribir el "cláusula hasLinks" desde el bloque Tipo
+  EnumClause? _readHasLinks(){
+    for(final c in clauses){ if(c is EnumClause && c.field=='hasLinks') return c; }
+    return null;
+  }
+  void _writeHasLinks(EnumClause? v){
+    setState((){
+      int idx=-1;
+      for(int i=0;i<clauses.length;i++){
+        final c=clauses[i];
+        if(c is EnumClause && c.field=='hasLinks'){ idx=i; break; }
+      }
+      if(v==null){ if(idx!=-1) clauses.removeAt(idx); }
+      else{
+        if(idx==-1) clauses.add(v);
+        else clauses[idx]=v;
+      }
+    });
   }
 
   void _exportQuery(){
@@ -163,7 +206,6 @@ class _FiltersSheetState extends State<FiltersSheet>{
         expand:false, initialChildSize:.9,
         builder:(_,ctrl)=>Material(
           child: Column(children:[
-            // Cabecera compacta: solo iconos, con Wrap para evitar desbordes
             Padding(
               padding: const EdgeInsets.fromLTRB(8,8,8,8),
               child: Align(
@@ -171,33 +213,11 @@ class _FiltersSheetState extends State<FiltersSheet>{
                 child: Wrap(
                   spacing: 2, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    IconButton(
-                      tooltip: 'Añadir bloque',
-                      onPressed: _addBlock,
-                      icon: const Icon(Icons.add),
-                    ),
-                    IconButton(
-                      tooltip: 'Exportar búsqueda',
-                      onPressed: _exportQuery,
-                      icon: const Icon(Icons.upload),
-                    ),
-                    IconButton(
-                      tooltip: 'Importar búsqueda',
-                      onPressed: _importQuery,
-                      icon: const Icon(Icons.download),
-                    ),
-                    IconButton(
-                      tooltip: 'Limpiar',
-                      onPressed: () => setState(()=>clauses.clear()),
-                      icon: const Icon(Icons.clear_all),
-                    ),
-                    IconButton(
-                      tooltip: 'Aplicar',
-                      onPressed: () => Navigator.pop(
-                        context, SearchSpec(clauses:clauses.map((c)=>c.clone()).toList()),
-                      ),
-                      icon: const Icon(Icons.check),
-                    ),
+                    IconButton(tooltip:'Añadir bloque',   onPressed:_addBlock,     icon:const Icon(Icons.add)),
+                    IconButton(tooltip:'Exportar búsqueda',onPressed:_exportQuery, icon:const Icon(Icons.upload)),
+                    IconButton(tooltip:'Importar búsqueda',onPressed:_importQuery, icon:const Icon(Icons.download)),
+                    IconButton(tooltip:'Limpiar',          onPressed:()=>setState(()=>clauses.clear()), icon:const Icon(Icons.clear_all)),
+                    IconButton(tooltip:'Aplicar',          onPressed:()=>Navigator.pop(context,SearchSpec(clauses:clauses.map((c)=>c.clone()).toList())), icon:const Icon(Icons.check)),
                   ],
                 ),
               ),
@@ -209,6 +229,8 @@ class _FiltersSheetState extends State<FiltersSheet>{
                   clause:clauses[i],
                   onRemove:()=>setState(()=>clauses.removeAt(i)),
                   onUpdate:(nc)=>setState(()=>clauses[i]=nc),
+                  readHasLinks:_readHasLinks,
+                  writeHasLinks:_writeHasLinks,
                 )),
             ])),
           ]),
@@ -225,10 +247,12 @@ class _FiltersSheetState extends State<FiltersSheet>{
   }
 }
 
-/* ===== Editor de bloque (sin cambios funcionales relevantes) ===== */
+/* ===== Editor de bloque ===== */
 class _ClauseEditor extends StatefulWidget{
   final Clause clause; final VoidCallback onRemove; final ValueChanged<Clause> onUpdate;
-  const _ClauseEditor({required this.clause,required this.onRemove,required this.onUpdate});
+  final EnumClause? Function()? readHasLinks;        // ← acceso a cláusula hasLinks
+  final void Function(EnumClause?)? writeHasLinks;   // ← modificar/crear/eliminar hasLinks
+  const _ClauseEditor({required this.clause,required this.onRemove,required this.onUpdate,this.readHasLinks,this.writeHasLinks});
   @override State<_ClauseEditor> createState()=>_ClauseEditorState();
 }
 class _ClauseEditorState extends State<_ClauseEditor>{
@@ -262,28 +286,61 @@ class _ClauseEditorState extends State<_ClauseEditor>{
 
   Widget _body(Clause c){
     if(c is EnumClause){
-      if(c.field=='hasLinks'){
+      if(c.field=='type'){
+        // chips de tipo + chips de relación (con/sin enlaces) gestionados como cláusula aparte
+        final values = ['idea','action'];
+        final chipsTipo = values.map((v)=>_TriPill(
+          label:v, mode:_mode(c,v),
+          onTap:(){
+            setState((){
+              final next=_next(_mode(c,v)); c.include.remove(v); c.exclude.remove(v);
+              if(next==Tri.include)c.include.add(v); if(next==Tri.exclude)c.exclude.add(v);
+              widget.onUpdate(c);
+            });
+          },
+        ));
+
         Tri _invert(Tri m)=>switch(m){Tri.include=>Tri.exclude,Tri.exclude=>Tri.include,_=>Tri.off};
-        final m=_mode(c,'true');
-        return Wrap(spacing:8,runSpacing:8,children:[
-          _TriPill(label:'Con enlaces',mode:m,onTap:(){
-            setState((){
-              final next=_next(m); c.include.remove('true'); c.exclude.remove('true');
-              if(next==Tri.include)c.include.add('true'); if(next==Tri.exclude)c.exclude.add('true');
-              widget.onUpdate(c);
-            });
-          }),
-          _TriPill(label:'Sin enlaces',mode:_invert(m),onTap:(){
-            setState((){
-              final next=_next(_invert(m)); final write=_invert(next);
-              c.include.remove('true'); c.exclude.remove('true');
-              if(write==Tri.include)c.include.add('true'); if(write==Tri.exclude)c.exclude.add('true');
-              widget.onUpdate(c);
-            });
-          }),
-        ]);
+        final hl = widget.readHasLinks?.call();
+        final m  = hl==null ? Tri.off : _mode(hl,'true');
+
+        final chipsRel = [
+          _TriPill(
+            label:'Con enlaces', mode:m,
+            onTap:(){
+              final next=_next(m);
+              EnumClause? nv;
+              if(next!=Tri.off){
+                nv = EnumClause(field:'hasLinks');
+                if(next==Tri.include) nv.include.add('true');
+                if(next==Tri.exclude) nv.exclude.add('true');
+              }
+              widget.writeHasLinks?.call(nv);
+              setState((){}); // refrescar subtítulo
+            },
+          ),
+          _TriPill(
+            label:'Sin enlaces', mode:_invert(m),
+            onTap:(){
+              final next=_next(_invert(m));           // ciclamos el complementario
+              final write = _invert(next);            // mapeo al real
+              EnumClause? nv;
+              if(write!=Tri.off){
+                nv = EnumClause(field:'hasLinks');
+                if(write==Tri.include) nv.include.add('true');
+                if(write==Tri.exclude) nv.exclude.add('true');
+              }
+              widget.writeHasLinks?.call(nv);
+              setState((){});
+            },
+          ),
+        ];
+
+        return Wrap(spacing:8,runSpacing:8,children:[...chipsTipo, const SizedBox(width:16), ...chipsRel]);
       }
-      final values = switch(c.field){ 'type'=>['idea','action'], 'status'=>['normal','completed','archived'], _=> <String>[] };
+
+      // Estado (enum)
+      final values = switch(c.field){ 'status'=>['normal','completed','archived'], 'hasLinks'=>['true'], _=> <String>[] };
       return Wrap(spacing:8,runSpacing:8,children:[
         for(final v in values)
           _TriPill(label:v, mode:_mode(c,v), onTap:(){
@@ -295,6 +352,8 @@ class _ClauseEditorState extends State<_ClauseEditor>{
           }),
       ]);
     }
+
+    // Texto
     final tc=c as TextClause;
     final t=TextEditingController(text:tc.tokens.map((x)=>(x.mode==Tri.exclude?'-':'')+x.t).join(' '));
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -310,10 +369,11 @@ class _ClauseEditorState extends State<_ClauseEditor>{
       ]),
       const SizedBox(height:12),
       Align(alignment:Alignment.centerRight,child:ElevatedButton(
-        onPressed:(){ final parts=t.text.trim().isEmpty? <String>[] : t.text.trim().split(RegExp(r'\s+'));
+        onPressed:(){
+          final parts=t.text.trim().isEmpty? <String>[] : t.text.trim().split(RegExp(r'\s+'));
           tc.tokens..clear()..addAll(parts.map((p)=> p.startsWith('-')&&p.length>1 ? Token(p.substring(1),Tri.exclude):Token(p,Tri.include)));
           widget.onUpdate(tc);
-        }, child:const Text('Aplicar texto'),
+        }, child:const Text('Aplicar'),
       )),
     ]);
   }
