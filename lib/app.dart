@@ -3,8 +3,6 @@ import 'config/blocks.dart';
 import 'models/enums.dart';
 import 'state/app_state.dart';
 import 'ui/screens/generic_screen.dart';
-
-// búsqueda avanzada + IO JSON
 import 'search/search_models.dart';
 import 'search/search_io.dart';
 
@@ -18,13 +16,12 @@ class _CaosAppState extends State<CaosApp> {
   SearchSpec spec = const SearchSpec();
   String quickQuery = '';
 
-  @override void dispose() { st.dispose(); super.dispose(); }
+  @override void dispose(){ st.dispose(); super.dispose(); }
 
   Future<void> _openFilters(BuildContext ctx) async {
     final seed = spec.clone();
     final updated = await showModalBottomSheet<SearchSpec>(
-      context: ctx,
-      isScrollControlled: true,
+      context: ctx, isScrollControlled: true,
       builder: (_) => FiltersSheet(initial: seed, state: st),
     );
     if (updated != null) setState(() => spec = updated.clone());
@@ -39,48 +36,97 @@ class _CaosAppState extends State<CaosApp> {
         animation: st,
         builder: (_, __) => DefaultTabController(
           length: blocks.length,
-          child: Builder(builder: (tabCtx) {
-            final tab = DefaultTabController.of(tabCtx); // controlador actual
-            return Scaffold(
-              appBar: AppBar(
-                title: const Text('CaosBox (Beta)'),
-                bottom: TabBar(
-                  tabs: [for (final b in blocks) Tab(icon: Icon(b.icon), text: b.label)],
-                ),
-              ),
-              body: SafeArea(
-                child: TabBarView(
-                  children: [
-                    for (final b in blocks)
-                      b.type != null
-                          ? GenericScreen(
-                              block: b,
-                              state: st,
-                              spec: spec,
-                              quickQuery: quickQuery,
-                              onQuickQuery: (q) => setState(() => quickQuery = q),
-                              onOpenFilters: _openFilters, // recibe ctx desde la pantalla
-                            )
-                          : b.custom!(context, st),
-                  ],
-                ),
-              ),
-              // Solo el FAB depende del índice del tab → safer
-              floatingActionButton: AnimatedBuilder(
-                animation: tab,
-                builder: (_, __) {
-                  final b = blocks[tab.index];
-                  if (b.type == null) return const SizedBox.shrink();
-                  return FloatingActionButton(
-                    onPressed: () => _openAddSheet(tabCtx, b.type!),
-                    child: const Icon(Icons.add),
-                  );
-                },
-              ),
-            );
-          }),
+          child: _HomeScaffold(
+            st: st,
+            spec: spec,
+            quickQuery: quickQuery,
+            onQuickQuery: (q) => setState(() => quickQuery = q),
+            onOpenFilters: _openFilters,
+          ),
         ),
       ),
+    );
+  }
+}
+
+/* ---------- Scaffold bajo el DefaultTabController (seguro) ---------- */
+class _HomeScaffold extends StatefulWidget {
+  final AppState st;
+  final SearchSpec spec;
+  final String quickQuery;
+  final ValueChanged<String> onQuickQuery;
+  final Future<void> Function(BuildContext) onOpenFilters;
+
+  const _HomeScaffold({
+    required this.st,
+    required this.spec,
+    required this.quickQuery,
+    required this.onQuickQuery,
+    required this.onOpenFilters,
+  });
+
+  @override State<_HomeScaffold> createState() => _HomeScaffoldState();
+}
+
+class _HomeScaffoldState extends State<_HomeScaffold> {
+  TabController? _tab;
+  int _tabIndex = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final t = DefaultTabController.of(context);
+    if (_tab != t) {
+      _tab?.removeListener(_onTab);
+      _tab = t;
+      if (_tab != null) {
+        _tabIndex = _tab!.index;
+        _tab!.addListener(_onTab);
+      }
+    }
+  }
+
+  void _onTab() {
+    if (!mounted || _tab == null) return;
+    if (_tabIndex != _tab!.index) setState(() => _tabIndex = _tab!.index);
+  }
+
+  @override
+  void dispose() {
+    _tab?.removeListener(_onTab);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('CaosBox (Beta)'),
+        bottom: TabBar(tabs: [for (final b in blocks) Tab(icon: Icon(b.icon), text: b.label)]),
+      ),
+      body: SafeArea(
+        child: TabBarView(
+          children: [
+            for (final b in blocks)
+              b.type != null
+                  ? GenericScreen(
+                      block: b,
+                      state: widget.st,
+                      spec: widget.spec,
+                      quickQuery: widget.quickQuery,
+                      onQuickQuery: widget.onQuickQuery,
+                      onOpenFilters: widget.onOpenFilters, // recibe context de pantalla
+                    )
+                  : b.custom!(context, widget.st),
+          ],
+        ),
+      ),
+      floatingActionButton: (blocks[_tabIndex].type == null)
+          ? null
+          : FloatingActionButton(
+              onPressed: () => _openAddSheet(context, blocks[_tabIndex].type!),
+              child: const Icon(Icons.add),
+            ),
     );
   }
 
@@ -123,7 +169,7 @@ class _CaosAppState extends State<CaosApp> {
               ElevatedButton(
                 onPressed: () {
                   if (c.text.trim().isEmpty) return;
-                  st.add(type, c.text);
+                  widget.st.add(type, c.text);
                   Navigator.pop(ctx);
                 },
                 child: const Text('Agregar'),
@@ -147,17 +193,22 @@ class FiltersSheet extends StatefulWidget {
 
 class _FiltersSheetState extends State<FiltersSheet> {
   late List<Clause> clauses;
-  @override void initState() { super.initState(); clauses = widget.initial.clauses.map((c) => c.clone()).toList(); }
+
+  @override
+  void initState() {
+    super.initState();
+    clauses = widget.initial.clauses.map((c) => c.clone()).toList();
+  }
 
   Future<void> _addBlock() async {
     final chose = await showModalBottomSheet<String>(
       context: context,
       builder: (_) => SafeArea(
         child: Wrap(children: [
-          ListTile(leading: const Icon(Icons.category),     title: const Text('Tipo (enum)'),        onTap: () { Navigator.pop(context, 'type'); }),
-          ListTile(leading: const Icon(Icons.flag),         title: const Text('Estado (enum)'),      onTap: () { Navigator.pop(context, 'status'); }),
-          ListTile(leading: const Icon(Icons.link),         title: const Text('Relaciones'),         onTap: () { Navigator.pop(context, 'hasLinks'); }),
-          ListTile(leading: const Icon(Icons.text_fields),  title: const Text('Texto'),              onTap: () { Navigator.pop(context, 'text'); }),
+          ListTile(leading: const Icon(Icons.category),    title: const Text('Tipo (enum)'),   onTap: () => Navigator.pop(context, 'type')),
+          ListTile(leading: const Icon(Icons.flag),        title: const Text('Estado (enum)'), onTap: () => Navigator.pop(context, 'status')),
+          ListTile(leading: const Icon(Icons.link),        title: const Text('Relaciones'),    onTap: () => Navigator.pop(context, 'hasLinks')),
+          ListTile(leading: const Icon(Icons.text_fields), title: const Text('Texto'),         onTap: () => Navigator.pop(context, 'text')),
         ]),
       ),
     );
@@ -357,8 +408,7 @@ class _ClauseEditorState extends State<_ClauseEditor> {
         _ => <String>[],
       };
       return Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: 8, runSpacing: 8,
         children: [
           for (final v in values)
             _TriPill(
@@ -441,9 +491,7 @@ class _TriPill extends StatelessWidget {
   const _TriPill({required this.label, required this.mode, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    Color? bg;
-    if (mode == Tri.include) bg = Colors.green.withOpacity(.15);
-    if (mode == Tri.exclude) bg = Colors.red.withOpacity(.15);
+    Color? bg; if (mode == Tri.include) bg = Colors.green.withOpacity(.15); if (mode == Tri.exclude) bg = Colors.red.withOpacity(.15);
     return InkWell(
       onTap: onTap,
       child: Container(
