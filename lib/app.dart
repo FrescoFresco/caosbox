@@ -163,24 +163,44 @@ class _FiltersSheetState extends State<FiltersSheet>{
         expand:false, initialChildSize:.9,
         builder:(_,ctrl)=>Material(
           child: Column(children:[
+            // Cabecera compacta: solo iconos, con Wrap para evitar desbordes
             Padding(
-              padding: const EdgeInsets.fromLTRB(16,12,8,8),
-              child: Row(children:[
-                const Text('Filtrar / Buscar (avanzado)',style:TextStyle(fontWeight:FontWeight.bold)),
-                const Spacer(),
-                TextButton.icon(onPressed:_addBlock, icon:const Icon(Icons.add), label:const Text('Añadir bloque')),
-                const SizedBox(width:8),
-                OutlinedButton.icon(onPressed:_exportQuery, icon:const Icon(Icons.upload),   label:const Text('Exportar búsqueda')),
-                const SizedBox(width:8),
-                OutlinedButton.icon(onPressed:_importQuery, icon:const Icon(Icons.download), label:const Text('Importar búsqueda')),
-                const SizedBox(width:8),
-                OutlinedButton(onPressed:()=>setState(()=>clauses.clear()), child:const Text('Limpiar')),
-                const SizedBox(width:8),
-                FilledButton(
-                  onPressed:()=>Navigator.pop(context, SearchSpec(clauses:clauses.map((c)=>c.clone()).toList())),
-                  child:const Text('Aplicar'),
+              padding: const EdgeInsets.fromLTRB(8,8,8,8),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  spacing: 2, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    IconButton(
+                      tooltip: 'Añadir bloque',
+                      onPressed: _addBlock,
+                      icon: const Icon(Icons.add),
+                    ),
+                    IconButton(
+                      tooltip: 'Exportar búsqueda',
+                      onPressed: _exportQuery,
+                      icon: const Icon(Icons.upload),
+                    ),
+                    IconButton(
+                      tooltip: 'Importar búsqueda',
+                      onPressed: _importQuery,
+                      icon: const Icon(Icons.download),
+                    ),
+                    IconButton(
+                      tooltip: 'Limpiar',
+                      onPressed: () => setState(()=>clauses.clear()),
+                      icon: const Icon(Icons.clear_all),
+                    ),
+                    IconButton(
+                      tooltip: 'Aplicar',
+                      onPressed: () => Navigator.pop(
+                        context, SearchSpec(clauses:clauses.map((c)=>c.clone()).toList()),
+                      ),
+                      icon: const Icon(Icons.check),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
             ),
             const Divider(height:1),
             Expanded(child: ListView(controller:ctrl,padding:const EdgeInsets.all(12), children:[
@@ -205,7 +225,7 @@ class _FiltersSheetState extends State<FiltersSheet>{
   }
 }
 
-/* ===== Editor de bloque ===== */
+/* ===== Editor de bloque (sin cambios funcionales relevantes) ===== */
 class _ClauseEditor extends StatefulWidget{
   final Clause clause; final VoidCallback onRemove; final ValueChanged<Clause> onUpdate;
   const _ClauseEditor({required this.clause,required this.onRemove,required this.onUpdate});
