@@ -1,17 +1,17 @@
-// lib/ui/screens/generic_screen.dart
 import 'package:flutter/material.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/models/item.dart';
-import 'package:caosbox/core/utils/tri.dart';             // ← IMPORTA Tri
 import 'package:caosbox/config/blocks.dart';
 import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/ui/widgets/item_tile.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
+import 'package:caosbox/ui/widgets/composer_card.dart';
 
 import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 import 'package:caosbox/ui/widgets/search_bar_row.dart';
+import 'package:caosbox/core/utils/tri.dart';
 
 class GenericScreen extends StatefulWidget {
   final Block block;
@@ -37,12 +37,13 @@ class GenericScreen extends StatefulWidget {
 class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveClientMixin {
   final _ex = <String>{};
   late final TextEditingController _q;
+  late final TextEditingController _composer;
 
   @override
   void initState() {
     super.initState();
-    _q = TextEditingController(text: widget.quickQuery);
-    _q.addListener(() => widget.onQuickQuery(_q.text));
+    _q = TextEditingController(text: widget.quickQuery)..addListener(() => widget.onQuickQuery(_q.text));
+    _composer = TextEditingController();
   }
 
   @override
@@ -55,7 +56,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
   }
 
   @override
-  void dispose() { _q.dispose(); super.dispose(); }
+  void dispose() { _q.dispose(); _composer.dispose(); super.dispose(); }
 
   @override bool get wantKeepAlive => true;
 
@@ -68,8 +69,10 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
         final t = widget.block.type!;
         final src = widget.state.items(t);
         final effective = _mergeQuick(widget.spec, _q.text);
-
         final filtered = List<Item>.from(applySearch(widget.state, src, effective), growable: false);
+
+        final icon = t == ItemType.idea ? Icons.lightbulb : Icons.assignment;
+        final hint = t == ItemType.idea ? 'Escribe tu idea...' : 'Describe la acción...';
 
         return Padding(
           padding: const EdgeInsets.all(12),
@@ -95,6 +98,17 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
                 }
               },
             ),
+
+            const SizedBox(height: 12),
+            // Composer "con forma" (sustituye al FAB)
+            ComposerCard(
+              icon: icon,
+              hint: hint,
+              controller: _composer,
+              onAdd: () { widget.state.add(t, _composer.text); _composer.clear(); },
+              onCancel: () { _composer.clear(); },
+            ),
+
             const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
