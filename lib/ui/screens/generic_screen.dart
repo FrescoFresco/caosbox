@@ -12,10 +12,10 @@ import '../widgets/search_bar_row.dart';
 class GenericScreen extends StatefulWidget {
   final Block block;
   final AppState state;
-  final SearchSpec spec;                 // filtros avanzados
-  final String quickQuery;               // texto de la lupa
+  final SearchSpec spec;                 // filtros avanzados (de ESTA pestaña)
+  final String quickQuery;               // texto de la lupa (de ESTA pestaña)
   final ValueChanged<String> onQuickQuery;
-  final Future<void> Function(BuildContext) onOpenFilters;
+  final Future<void> Function(BuildContext, ItemType) onOpenFilters;
 
   const GenericScreen({
     super.key,
@@ -72,7 +72,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
       child: Column(children: [
         SearchBarRow(
           controller: _q,
-          onOpenFilters: () => widget.onOpenFilters(ctx),
+          onOpenFilters: () => widget.onOpenFilters(ctx, t),
           onExportData: () {
             final json = exportDataJson(widget.state);
             _showLong(ctx, 'Datos (JSON)', json);
