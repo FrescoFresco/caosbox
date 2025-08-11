@@ -23,7 +23,7 @@ jobs:
       - name: Build Flutter Web
         run: flutter build web --release --base-href=/
 
-      # SPA fallback (útil para evitar 404 al navegar directo)
+      # Fallback SPA para evitar 404 en rutas directas
       - name: Add 404 fallback
         run: cp build/web/index.html build/web/404.html
 
