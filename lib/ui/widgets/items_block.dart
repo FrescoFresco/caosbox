@@ -8,7 +8,9 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 
-import 'package:caosbox/ui/widgets/search_bar.dart';
+// <<< usa el buscador propio con prefijo para no chocar con Flutter SearchBar >>>
+import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
+
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/widgets/item_tile.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
@@ -100,7 +102,6 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
         final effective = _mergeQuick(widget.spec, _q.text);
         final filtered = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
-        // defino callbacks IO (solo si se pasan al buscador)
         final onExportData = () {
           final json = exportDataJson(widget.state);
           _showLong(context, 'Datos (JSON)', json);
@@ -112,26 +113,30 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
             builder: (dctx) => AlertDialog(
               title: const Text('Importar datos (reemplaza)'),
               content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-              actions: [ TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                         FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')) ],
+              actions: [
+                TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
+                FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
+              ],
             ),
           );
           if (ok == true) {
-            try { importDataJsonReplace(widget.state, ctrl.text); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos importados'))); }
-            catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'))); }
+            try {
+              importDataJsonReplace(widget.state, ctrl.text);
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos importados')));
+            } catch (e) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+            }
           }
         };
 
         final showComposer = widget.showComposer && widget.mode == ItemsBlockMode.list;
-
-        // Config del buscador único según el contexto:
-        final showFilters = widget.mode == ItemsBlockMode.list; // solo en listas de Ideas/Acciones
-        final showDataIO  = widget.mode == ItemsBlockMode.list; // IO solo en listas principales
+        final showFilters = widget.mode == ItemsBlockMode.list; // solo listas principales
+        final showDataIO  = widget.mode == ItemsBlockMode.list; // IO solo listas principales
 
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Column(children: [
-            SearchBar(
+            cx.SearchBar(
               controller: _q,
               onOpenFilters: showFilters ? widget.onOpenFilters : null,
               onExportData:  showDataIO  ? onExportData : null,
