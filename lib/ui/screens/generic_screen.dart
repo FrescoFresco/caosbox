@@ -6,6 +6,7 @@ import 'info_modal.dart';
 
 import '../../search/search_models.dart';
 import '../../search/search_engine.dart';
+import '../widgets/search_bar_row.dart';
 
 class GenericScreen extends StatefulWidget {
   final Block block;
@@ -13,7 +14,7 @@ class GenericScreen extends StatefulWidget {
   final SearchSpec spec;                 // filtros avanzados
   final String quickQuery;               // texto de la lupa
   final ValueChanged<String> onQuickQuery;
-  final Future<void> Function(BuildContext) onOpenFilters; // <-- recibe context
+  final Future<void> Function(BuildContext) onOpenFilters;
 
   const GenericScreen({
     super.key,
@@ -30,28 +31,27 @@ class GenericScreen extends StatefulWidget {
 
 class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveClientMixin {
   final _ex = <String>{};
-  late final SearchController _sc; // M3 nativo
+  late final TextEditingController _q;
 
   @override
   void initState() {
     super.initState();
-    _sc = SearchController();
-    _sc.text = widget.quickQuery;
-    _sc.addListener(() => widget.onQuickQuery(_sc.text));
+    _q = TextEditingController(text: widget.quickQuery);
+    _q.addListener(() => widget.onQuickQuery(_q.text));
   }
 
   @override
   void didUpdateWidget(covariant GenericScreen old) {
     super.didUpdateWidget(old);
-    if (old.quickQuery != widget.quickQuery && _sc.text != widget.quickQuery) {
-      _sc.text = widget.quickQuery;
-      _sc.selection = TextSelection.collapsed(offset: _sc.text.length);
+    if (old.quickQuery != widget.quickQuery && _q.text != widget.quickQuery) {
+      _q.text = widget.quickQuery;
+      _q.selection = TextSelection.collapsed(offset: _q.text.length);
     }
   }
 
   @override
   void dispose() {
-    _sc.dispose();
+    _q.dispose();
     super.dispose();
   }
 
@@ -63,44 +63,15 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
     final t = widget.block.type!;
     final src = widget.state.items(t);
 
-    final effective = _mergeQuick(widget.spec, _sc.text);
+    final effective = _mergeQuick(widget.spec, _q.text);
     final filtered  = applySearch(widget.state, src, effective);
 
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(children: [
-        // 🔎 SearchAnchor.bar nativo
-        SearchAnchor.bar(
-          searchController: _sc,
-          barHintText: 'Buscar… (usa -palabra para excluir)',
-          barLeading: const Icon(Icons.search),
-          barTrailing: [
-            IconButton(
-              icon: const Icon(Icons.tune),
-              tooltip: 'Filtrado avanzado',
-              onPressed: () async {
-                // Cierra overlay de sugerencias antes de abrir el modal
-                _sc.closeView(null);
-                await widget.onOpenFilters(ctx); // usa el context de la pantalla
-              },
-            ),
-          ],
-          suggestionsBuilder: (context, controller) {
-            final quick = controller.text;
-            final spec = _mergeQuick(widget.spec, quick);
-            final results = applySearch(widget.state, src, spec).take(6).toList();
-
-            return results.map((it) => ListTile(
-              leading: const Icon(Icons.history),
-              title: Text(it.text, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text(it.id),
-              onTap: () {
-                controller.text = it.id;
-                widget.onQuickQuery(controller.text);
-                controller.closeView(it.id);
-              },
-            ));
-          },
+        SearchBarRow(
+          controller: _q,
+          onOpenFilters: () => widget.onOpenFilters(ctx),
         ),
         const SizedBox(height: 8),
 
@@ -126,7 +97,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
     );
   }
 
-  // Combina filtros avanzados + 🔎 rápida (tokens; -palabra = exclude)
+  // Combina filtros avanzados + búsqueda rápida (tokens; -palabra = exclude)
   SearchSpec _mergeQuick(SearchSpec base, String q) {
     final parts = q.trim().isEmpty ? <String>[] : q.trim().split(RegExp(r'\s+'));
     final tokens = parts.map((p) {
