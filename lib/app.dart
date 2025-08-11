@@ -15,27 +15,19 @@ class CaosApp extends StatefulWidget {
 
 class _CaosAppState extends State<CaosApp> {
   final st = AppState();
+  SearchSpec spec = const SearchSpec();
+  String quickQuery = '';
 
-  SearchSpec spec = const SearchSpec(); // filtros avanzados
-  String quickQuery = '';                // 🔎 rápida
+  @override void dispose() { st.dispose(); super.dispose(); }
 
-  @override
-  void dispose() {
-    st.dispose();
-    super.dispose();
-  }
-
-  // Abre filtros usando el context de la pantalla que llama
   Future<void> _openFilters(BuildContext ctx) async {
-    final seed = spec.clone(); // trabajar con copia en el modal
+    final seed = spec.clone();
     final updated = await showModalBottomSheet<SearchSpec>(
       context: ctx,
       isScrollControlled: true,
       builder: (_) => FiltersSheet(initial: seed, state: st),
     );
-    if (updated != null) {
-      setState(() => spec = updated.clone()); // guardar copia limpia
-    }
+    if (updated != null) setState(() => spec = updated.clone());
   }
 
   @override
@@ -47,47 +39,44 @@ class _CaosAppState extends State<CaosApp> {
         animation: st,
         builder: (_, __) => DefaultTabController(
           length: blocks.length,
-          child: Builder(builder: (ctxWithTab) {
-            final tabCtrl = DefaultTabController.of(ctxWithTab);
-            return AnimatedBuilder(
-              animation: tabCtrl.animation!,
-              builder: (ctx, __) {
-                final idx = tabCtrl.index;
-                final b = blocks[idx];
-                final showFab = b.type != null;
-
-                return Scaffold(
-                  appBar: AppBar(
-                    title: const Text('CaosBox (Beta)'),
-                    bottom: TabBar(
-                      tabs: [for (final bb in blocks) Tab(icon: Icon(bb.icon), text: bb.label)],
-                    ),
-                  ),
-                  body: SafeArea(
-                    child: TabBarView(
-                      children: [
-                        for (final bb in blocks)
-                          bb.type != null
-                              ? GenericScreen(
-                                  block: bb,
-                                  state: st,
-                                  spec: spec,
-                                  quickQuery: quickQuery,
-                                  onQuickQuery: (q) => setState(() => quickQuery = q),
-                                  onOpenFilters: _openFilters, // pasa función que recibe ctx
-                                )
-                              : bb.custom!(context, st),
-                      ],
-                    ),
-                  ),
-                  floatingActionButton: showFab
-                      ? FloatingActionButton(
-                          onPressed: () => _openAddSheet(ctx, b.type!),
-                          child: const Icon(Icons.add),
-                        )
-                      : null,
-                );
-              },
+          child: Builder(builder: (tabCtx) {
+            final tab = DefaultTabController.of(tabCtx); // controlador actual
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('CaosBox (Beta)'),
+                bottom: TabBar(
+                  tabs: [for (final b in blocks) Tab(icon: Icon(b.icon), text: b.label)],
+                ),
+              ),
+              body: SafeArea(
+                child: TabBarView(
+                  children: [
+                    for (final b in blocks)
+                      b.type != null
+                          ? GenericScreen(
+                              block: b,
+                              state: st,
+                              spec: spec,
+                              quickQuery: quickQuery,
+                              onQuickQuery: (q) => setState(() => quickQuery = q),
+                              onOpenFilters: _openFilters, // recibe ctx desde la pantalla
+                            )
+                          : b.custom!(context, st),
+                  ],
+                ),
+              ),
+              // Solo el FAB depende del índice del tab → safer
+              floatingActionButton: AnimatedBuilder(
+                animation: tab,
+                builder: (_, __) {
+                  final b = blocks[tab.index];
+                  if (b.type == null) return const SizedBox.shrink();
+                  return FloatingActionButton(
+                    onPressed: () => _openAddSheet(tabCtx, b.type!),
+                    child: const Icon(Icons.add),
+                  );
+                },
+              ),
             );
           }),
         ),
@@ -95,7 +84,6 @@ class _CaosAppState extends State<CaosApp> {
     );
   }
 
-  // FAB agregar
   void _openAddSheet(BuildContext context, ItemType type) {
     final c = TextEditingController();
     showModalBottomSheet(
@@ -159,56 +147,22 @@ class FiltersSheet extends StatefulWidget {
 
 class _FiltersSheetState extends State<FiltersSheet> {
   late List<Clause> clauses;
+  @override void initState() { super.initState(); clauses = widget.initial.clauses.map((c) => c.clone()).toList(); }
 
-  @override
-  void initState() {
-    super.initState();
-    // trabajar SIEMPRE con clones locales
-    clauses = widget.initial.clauses.map((c) => c.clone()).toList();
-  }
-
-  void _addBlock() async {
-    await showModalBottomSheet(
+  Future<void> _addBlock() async {
+    final chose = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) {
-        return SafeArea(
-          child: Wrap(children: [
-            ListTile(
-              title: const Text('Bloque: Tipo (enum)'),
-              leading: const Icon(Icons.category),
-              onTap: () {
-                setState(() => clauses.add(EnumClause(field: 'type')));
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Bloque: Estado (enum)'),
-              leading: const Icon(Icons.flag),
-              onTap: () {
-                setState(() => clauses.add(EnumClause(field: 'status')));
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Bloque: Relaciones (hasLinks)'),
-              leading: const Icon(Icons.link),
-              onTap: () {
-                setState(() => clauses.add(EnumClause(field: 'hasLinks')));
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              title: const Text('Bloque: Texto'),
-              leading: const Icon(Icons.text_fields),
-              onTap: () {
-                setState(() => clauses.add(TextClause()));
-                Navigator.pop(context);
-              },
-            ),
-          ]),
-        );
-      },
+      builder: (_) => SafeArea(
+        child: Wrap(children: [
+          ListTile(leading: const Icon(Icons.category),     title: const Text('Tipo (enum)'),        onTap: () { Navigator.pop(context, 'type'); }),
+          ListTile(leading: const Icon(Icons.flag),         title: const Text('Estado (enum)'),      onTap: () { Navigator.pop(context, 'status'); }),
+          ListTile(leading: const Icon(Icons.link),         title: const Text('Relaciones'),         onTap: () { Navigator.pop(context, 'hasLinks'); }),
+          ListTile(leading: const Icon(Icons.text_fields),  title: const Text('Texto'),              onTap: () { Navigator.pop(context, 'text'); }),
+        ]),
+      ),
     );
+    if (chose == null) return;
+    setState(() => clauses.add(chose == 'text' ? TextClause() : EnumClause(field: chose)));
   }
 
   @override
@@ -231,7 +185,7 @@ class _FiltersSheetState extends State<FiltersSheet> {
                 FilledButton(
                   onPressed: () => Navigator.pop(
                     context,
-                    SearchSpec(clauses: clauses.map((c) => c.clone()).toList()), // devolver COPIA
+                    SearchSpec(clauses: clauses.map((c) => c.clone()).toList()),
                   ),
                   child: const Text('Aplicar'),
                 ),
@@ -252,44 +206,34 @@ class _FiltersSheetState extends State<FiltersSheet> {
                         onUpdate: (nc) => setState(() => clauses[i] = nc),
                       ),
                     ),
-                  const SizedBox(height: 8),
                   const Divider(),
                   const ListTile(title: Text('Búsqueda (JSON)')),
                   Wrap(spacing: 8, children: [
                     OutlinedButton.icon(
                       icon: const Icon(Icons.visibility),
                       label: const Text('Ver / Copiar JSON'),
-                      onPressed: () {
-                        final json = exportQueryJson(SearchSpec(clauses: clauses));
-                        _showLongText(context, 'Búsqueda (JSON)', json);
-                      },
+                      onPressed: () => _showLongText('Búsqueda (JSON)', exportQueryJson(SearchSpec(clauses: clauses))),
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.paste),
-                      label: const Text('Pegar JSON y Cargar'),
+                      label: const Text('Pegar y Cargar'),
                       onPressed: () async {
                         final ctrl = TextEditingController();
                         final ok = await showDialog<bool>(
                           context: context,
-                          builder: (ctx) {
-                            return AlertDialog(
-                              title: const Text('Pega la búsqueda (JSON)'),
-                              content: TextField(
-                                controller: ctrl,
-                                maxLines: 14,
-                                decoration: const InputDecoration(border: OutlineInputBorder()),
-                              ),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cargar')),
-                              ],
-                            );
-                          },
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Pega la búsqueda'),
+                            content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder())),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cargar')),
+                            ],
+                          ),
                         );
                         if (ok == true) {
                           try {
-                            final spec = importQueryJson(ctrl.text);
-                            setState(() => clauses = [...spec.clauses.map((c) => c.clone())]); // clones
+                            final s = importQueryJson(ctrl.text);
+                            setState(() => clauses = [...s.clauses.map((c) => c.clone())]);
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Búsqueda cargada')));
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -298,42 +242,34 @@ class _FiltersSheetState extends State<FiltersSheet> {
                       },
                     ),
                   ]),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   const Divider(),
                   const ListTile(title: Text('Datos (JSON)')),
                   Wrap(spacing: 8, children: [
                     OutlinedButton.icon(
                       icon: const Icon(Icons.upload),
-                      label: const Text('Exportar datos'),
-                      onPressed: () {
-                        final json = exportDataJson(widget.state);
-                        _showLongText(context, 'Datos (JSON)', json);
-                      },
+                      label: const Text('Exportar'),
+                      onPressed: () => _showLongText('Datos (JSON)', exportDataJson(widget.state)),
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.download),
-                      label: const Text('Importar datos (reemplazar)'),
+                      label: const Text('Importar (reemplaza)'),
                       onPressed: () async {
                         final ctrl = TextEditingController();
                         final ok = await showDialog<bool>(
                           context: context,
-                          builder: (ctx) {
-                            return AlertDialog(
-                              title: const Text('Importar datos (reemplazo)'),
-                              content: TextField(
-                                controller: ctrl,
-                                maxLines: 14,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  hintText: 'Pega aquí el JSON de datos…',
-                                ),
-                              ),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Importar')),
-                              ],
-                            );
-                          },
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('Importar datos'),
+                            content: TextField(
+                              controller: ctrl,
+                              maxLines: 14,
+                              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON…'),
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+                              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Importar')),
+                            ],
+                          ),
                         );
                         if (ok == true) {
                           try {
@@ -346,7 +282,7 @@ class _FiltersSheetState extends State<FiltersSheet> {
                       },
                     ),
                   ]),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -356,16 +292,14 @@ class _FiltersSheetState extends State<FiltersSheet> {
     );
   }
 
-  void _showLongText(BuildContext context, String title, String text) {
+  void _showLongText(String title, String text) {
     showDialog(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(title),
-          content: SizedBox(width: 600, child: SelectableText(text)),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar'))],
-        );
-      },
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(width: 600, child: SelectableText(text)),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar'))],
+      ),
     );
   }
 }
@@ -402,22 +336,16 @@ class _ClauseEditorState extends State<_ClauseEditor> {
     );
   }
 
-  String _title(Clause c) {
-    if (c is EnumClause) {
-      return switch (c.field) { 'type' => 'Tipo', 'status' => 'Estado', 'hasLinks' => 'Relaciones', _ => 'Enum' };
-    }
-    return 'Texto';
-  }
+  String _title(Clause c) => c is EnumClause
+      ? switch (c.field) { 'type' => 'Tipo', 'status' => 'Estado', 'hasLinks' => 'Relaciones', _ => 'Enum' }
+      : 'Texto';
 
   String _summary(Clause c) {
-    if (c is EnumClause) {
-      return 'incluye=${c.include.join(",")} excluye=${c.exclude.join(",")}';
-    } else if (c is TextClause) {
-      final fields = c.fields.entries.map((e) => '${e.key}:${_triToStr(e.value)}').join(' ');
-      final toks = c.tokens.map((t) => (t.mode == Tri.exclude ? '-' : '') + t.t).join(' ');
-      return '"$toks"  en: $fields';
-    }
-    return '';
+    if (c is EnumClause) return 'incluye=${c.include.join(",")} excluye=${c.exclude.join(",")}';
+    final tc = c as TextClause;
+    final fields = tc.fields.entries.map((e) => '${e.key}:${_triToStr(e.value)}').join(' ');
+    final toks = tc.tokens.map((t) => (t.mode == Tri.exclude ? '-' : '') + t.t).join(' ');
+    return '"$toks"  en: $fields';
   }
 
   Widget _body(Clause c) {
@@ -435,82 +363,71 @@ class _ClauseEditorState extends State<_ClauseEditor> {
           for (final v in values)
             _TriPill(
               label: v,
-              mode: _currentMode(c, v),
+              mode: _mode(c, v),
               onTap: () {
-                final next = _next(_currentMode(c, v));
                 setState(() {
-                  _setMode(c, v, next);
+                  final next = _next(_mode(c, v));
+                  c.include.remove(v);
+                  c.exclude.remove(v);
+                  if (next == Tri.include) c.include.add(v);
+                  if (next == Tri.exclude) c.exclude.add(v);
                   widget.onUpdate(c);
                 });
               },
             ),
         ],
       );
-    } else if (c is TextClause) {
-      final ctrl = TextEditingController(
-        text: c.tokens.map((t) => (t.mode == Tri.exclude ? '-' : '') + t.t).join(' '),
-      );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Consulta (tokens; usa "-" para excluir)'),
-          const SizedBox(height: 6),
-          TextField(controller: ctrl, minLines: 1, maxLines: 3, decoration: const InputDecoration(border: OutlineInputBorder())),
-          const SizedBox(height: 10),
-          const Text('Alcances'),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final k in ['id', 'content', 'note'])
-                _TriPill(
-                  label: k,
-                  mode: c.fields[k] ?? Tri.off,
-                  onTap: () {
-                    final next = _next(c.fields[k] ?? Tri.off);
-                    setState(() {
-                      c.fields[k] = next;
-                      widget.onUpdate(c);
-                    });
-                  },
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: () {
-                final raw = ctrl.text.trim();
-                final parts = raw.isEmpty ? <String>[] : raw.split(RegExp(r'\s+'));
-                c.tokens
-                  ..clear()
-                  ..addAll(parts.map((p) {
-                    if (p.startsWith('-') && p.length > 1) return Token(p.substring(1), Tri.exclude);
-                    return Token(p, Tri.include);
-                  }));
-                widget.onUpdate(c);
-              },
-              child: const Text('Aplicar texto'),
-            ),
-          ),
-        ],
-      );
     }
-    return const SizedBox.shrink();
+    final tc = c as TextClause;
+    final ctrl = TextEditingController(text: tc.tokens.map((t) => (t.mode == Tri.exclude ? '-' : '') + t.t).join(' '));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Consulta (usa "-" para excluir)'),
+        const SizedBox(height: 6),
+        TextField(controller: ctrl, minLines: 1, maxLines: 3, decoration: const InputDecoration(border: OutlineInputBorder())),
+        const SizedBox(height: 10),
+        const Text('Alcances'),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final k in ['id', 'content', 'note'])
+              _TriPill(
+                label: k,
+                mode: tc.fields[k] ?? Tri.off,
+                onTap: () {
+                  setState(() {
+                    tc.fields[k] = _next(tc.fields[k] ?? Tri.off);
+                    widget.onUpdate(tc);
+                  });
+                },
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: () {
+              final raw = ctrl.text.trim();
+              final parts = raw.isEmpty ? <String>[] : raw.split(RegExp(r'\s+'));
+              tc.tokens
+                ..clear()
+                ..addAll(parts.map((p) => p.startsWith('-') && p.length > 1 ? Token(p.substring(1), Tri.exclude) : Token(p, Tri.include)));
+              widget.onUpdate(tc);
+            },
+            child: const Text('Aplicar texto'),
+          ),
+        ),
+      ],
+    );
   }
 
-  Tri _currentMode(EnumClause c, String v) {
+  Tri _mode(EnumClause c, String v) {
     if (c.include.contains(v)) return Tri.include;
     if (c.exclude.contains(v)) return Tri.exclude;
     return Tri.off;
-  }
-
-  void _setMode(EnumClause c, String v, Tri to) {
-    c.include.remove(v);
-    c.exclude.remove(v);
-    if (to == Tri.include) c.include.add(v);
-    if (to == Tri.exclude) c.exclude.add(v);
   }
 
   Tri _next(Tri m) => switch (m) { Tri.off => Tri.include, Tri.include => Tri.exclude, Tri.exclude => Tri.off };
@@ -531,11 +448,7 @@ class _TriPill extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: Colors.black26),
-          borderRadius: BorderRadius.circular(999),
-        ),
+        decoration: BoxDecoration(color: bg, border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(999)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           if (mode == Tri.include) const Icon(Icons.check, size: 14),
           if (mode == Tri.exclude) const Icon(Icons.block, size: 14),
