@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:caosbox/models/enums.dart';
 import '../../config/blocks.dart';
 import '../../state/app_state.dart';
 import '../widgets/item_tile.dart';
@@ -12,8 +13,8 @@ import '../widgets/search_bar_row.dart';
 class GenericScreen extends StatefulWidget {
   final Block block;
   final AppState state;
-  final SearchSpec spec;                 // filtros avanzados (de ESTA pestaña)
-  final String quickQuery;               // texto de la lupa (de ESTA pestaña)
+  final SearchSpec spec;                 // filtros avanzados (DE ESTA PESTAÑA)
+  final String quickQuery;               // texto rápido (DE ESTA PESTAÑA)
   final ValueChanged<String> onQuickQuery;
   final Future<void> Function(BuildContext, ItemType) onOpenFilters;
 
