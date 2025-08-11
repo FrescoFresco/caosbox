@@ -4,9 +4,6 @@ import 'package:caosbox/config/blocks.dart';
 import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/ui/screens/generic_screen.dart';
 import 'package:caosbox/domain/search/search_models.dart';
-import 'package:caosbox/search/search_io.dart';
-import 'package:caosbox/core/utils/tri.dart';
-import 'package:caosbox/ui/widgets/tri_pill.dart';
 
 class CaosApp extends StatefulWidget {
   const CaosApp({super.key});
@@ -15,7 +12,6 @@ class CaosApp extends StatefulWidget {
 
 class _CaosAppState extends State<CaosApp> {
   final st = AppState();
-
   final Map<ItemType, SearchSpec> _specs = { ItemType.idea: const SearchSpec(), ItemType.action: const SearchSpec() };
   final Map<ItemType, String> _queries = { ItemType.idea: '', ItemType.action: '' };
 
@@ -37,93 +33,44 @@ class _CaosAppState extends State<CaosApp> {
       theme: ThemeData(useMaterial3: true),
       home: DefaultTabController(
         length: blocks.length,
-        child: _HomeScaffold(
-          st: st,
-          getSpec: (t)=> _specs[t] ?? const SearchSpec(),
-          getQuery: (t)=> _queries[t] ?? '',
-          setQuery: (t,q)=> setState(()=> _queries[t]=q),
-          onOpenFilters: _openFilters,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('CaosBox (Beta)'),
+            bottom: TabBar(tabs:[for(final b in blocks) Tab(icon:Icon(b.icon),text:b.label)]),
+          ),
+          body: SafeArea(child: TabBarView(children:[
+            for(final b in blocks)
+              b.type!=null
+                ? GenericScreen(
+                    block:b,
+                    state:st,
+                    spec: _specs[b.type!] ?? const SearchSpec(),
+                    quickQuery: _queries[b.type!] ?? '',
+                    onQuickQuery:(q)=> setState(()=> _queries[b.type!] = q),
+                    onOpenFilters:(BuildContext ctx, ItemType t)=>_openFilters(ctx, t),
+                  )
+                : b.custom!(context, st),
+          ])),
+          // sin FAB: el alta está dentro de cada pestaña con ComposerCard
         ),
       ),
     );
   }
 }
 
-/* ---------- Scaffold ---------- */
-class _HomeScaffold extends StatefulWidget {
-  final AppState st;
-  final SearchSpec Function(ItemType) getSpec;
-  final String Function(ItemType) getQuery;
-  final void Function(ItemType,String) setQuery;
-  final Future<void> Function(BuildContext, ItemType) onOpenFilters;
+/* ----------------- FiltersSheet (igual que tu versión con chip Enlaces dentro de “Tipo”) ----------------- */
+import 'package:caosbox/search/search_io.dart';
+import 'package:caosbox/core/utils/tri.dart';
+import 'package:caosbox/ui/widgets/tri_pill.dart';
+import 'package:caosbox/domain/search/search_engine.dart'; // (para tipos)
+import 'package:caosbox/app/state/app_state.dart';
 
-  const _HomeScaffold({super.key, required this.st, required this.getSpec, required this.getQuery, required this.setQuery, required this.onOpenFilters});
-
-  @override State<_HomeScaffold> createState()=>_HomeScaffoldState();
-}
-class _HomeScaffoldState extends State<_HomeScaffold>{
-  TabController? _tab; int _tabIndex=0;
-  @override void didChangeDependencies(){ super.didChangeDependencies(); final t=DefaultTabController.of(context);
-    if(_tab!=t){ _tab?.removeListener(_onTab); _tab=t; if(_tab!=null){ _tabIndex=_tab!.index; _tab!.addListener(_onTab);} } }
-  void _onTab(){ if(!mounted||_tab==null)return; if(_tabIndex!=_tab!.index) setState(()=>_tabIndex=_tab!.index); }
-  @override void dispose(){ _tab?.removeListener(_onTab); super.dispose(); }
-
-  @override
-  Widget build(BuildContext context){
-    return Scaffold(
-      appBar: AppBar(title: const Text('CaosBox (Beta)'), bottom: TabBar(tabs:[for(final b in blocks) Tab(icon:Icon(b.icon),text:b.label)])),
-      body: SafeArea(child: TabBarView(children:[
-        for(final b in blocks)
-          b.type!=null
-            ? GenericScreen(
-                block:b,
-                state:widget.st,
-                spec: widget.getSpec(b.type!),
-                quickQuery: widget.getQuery(b.type!),
-                onQuickQuery:(q)=>widget.setQuery(b.type!, q),
-                onOpenFilters:(BuildContext ctx, ItemType t)=>widget.onOpenFilters(ctx, t),
-              )
-            : const SizedBox.shrink(),
-      ])),
-      floatingActionButton: (blocks[_tabIndex].type==null)?null
-        : FloatingActionButton(onPressed:()=>_openAddSheet(context,blocks[_tabIndex].type!), child:const Icon(Icons.add)),
-    );
-  }
-
-  void _openAddSheet(BuildContext context, ItemType type){
-    final c=TextEditingController();
-    showModalBottomSheet(
-      context:context,isScrollControlled:true,
-      builder:(ctx)=>Padding(
-        padding:EdgeInsets.only(bottom:MediaQuery.of(ctx).viewInsets.bottom,left:16,right:16,top:16),
-        child:SafeArea(top:false,child:Column(mainAxisSize:MainAxisSize.min,children:[
-          Row(children:[
-            Icon(type==ItemType.idea?Icons.lightbulb:Icons.assignment), const SizedBox(width:8),
-            Text(type==ItemType.idea?'Nueva idea':'Nueva acción',style:const TextStyle(fontWeight: FontWeight.bold)),
-            const Spacer(), IconButton(icon:const Icon(Icons.close),onPressed:()=>Navigator.pop(ctx)),
-          ]),
-          const SizedBox(height:8),
-          TextField(controller:c,autofocus:true,minLines:1,maxLines:8,
-            decoration:InputDecoration(hintText:type==ItemType.idea?'Escribe tu idea...':'Describe la acción...',border:const OutlineInputBorder())),
-          const SizedBox(height:12),
-          Row(mainAxisAlignment:MainAxisAlignment.end,children:[
-            TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancelar')),
-            const SizedBox(width:8),
-            ElevatedButton(onPressed:(){ if(c.text.trim().isEmpty)return; widget.st.add(type,c.text); Navigator.pop(ctx); },child:const Text('Agregar')),
-          ]),
-          const SizedBox(height:12),
-        ])),
-      ),
-    );
-  }
-}
-
-/* ================== Hoja de filtros (avanzado) ================== */
 class FiltersSheet extends StatefulWidget{
   final SearchSpec initial; final AppState state;
   const FiltersSheet({super.key,required this.initial,required this.state});
   @override State<FiltersSheet> createState()=>_FiltersSheetState();
 }
+
 class _FiltersSheetState extends State<FiltersSheet>{
   late List<Clause> clauses;
   @override void initState(){ super.initState(); clauses=widget.initial.clauses.map((c)=>c.clone()).toList(); }
@@ -222,7 +169,6 @@ class _FiltersSheetState extends State<FiltersSheet>{
   }
 }
 
-/* ===== Editor de bloque ===== */
 class _ClauseEditor extends StatefulWidget{
   final Clause clause; final VoidCallback onRemove; final ValueChanged<Clause> onUpdate;
   final EnumClause? Function()? readHasLinks;
@@ -340,5 +286,5 @@ class _ClauseEditorState extends State<_ClauseEditor>{
   }
 
   Tri _mode(EnumClause c, String v){ if(c.include.contains(v))return Tri.include; if(c.exclude.contains(v))return Tri.exclude; return Tri.off; }
-  Tri _next(Tri m)=> m.next();
+  Tri _next(Tri m)=> switch(m){Tri.off=>Tri.include,Tri.include=>Tri.exclude,Tri.exclude=>Tri.off};
 }
