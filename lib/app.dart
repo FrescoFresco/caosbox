@@ -5,6 +5,11 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/ui/screens/generic_screen.dart';
 import 'package:caosbox/domain/search/search_models.dart';
 
+// Para filtros avanzados (export/import de búsqueda y UI de chips)
+import 'package:caosbox/search/search_io.dart';
+import 'package:caosbox/core/utils/tri.dart';
+import 'package:caosbox/ui/widgets/tri_pill.dart';
+
 class CaosApp extends StatefulWidget {
   const CaosApp({super.key});
   @override State<CaosApp> createState() => _CaosAppState();
@@ -12,7 +17,10 @@ class CaosApp extends StatefulWidget {
 
 class _CaosAppState extends State<CaosApp> {
   final st = AppState();
-  final Map<ItemType, SearchSpec> _specs = { ItemType.idea: const SearchSpec(), ItemType.action: const SearchSpec() };
+  final Map<ItemType, SearchSpec> _specs = {
+    ItemType.idea: const SearchSpec(),
+    ItemType.action: const SearchSpec(),
+  };
   final Map<ItemType, String> _queries = { ItemType.idea: '', ItemType.action: '' };
 
   @override void dispose(){ st.dispose(); super.dispose(); }
@@ -51,20 +59,13 @@ class _CaosAppState extends State<CaosApp> {
                   )
                 : b.custom!(context, st),
           ])),
-          // sin FAB: el alta está dentro de cada pestaña con ComposerCard
         ),
       ),
     );
   }
 }
 
-/* ----------------- FiltersSheet (igual que tu versión con chip Enlaces dentro de “Tipo”) ----------------- */
-import 'package:caosbox/search/search_io.dart';
-import 'package:caosbox/core/utils/tri.dart';
-import 'package:caosbox/ui/widgets/tri_pill.dart';
-import 'package:caosbox/domain/search/search_engine.dart'; // (para tipos)
-import 'package:caosbox/app/state/app_state.dart';
-
+/* ----------------- Hoja de filtros (avanzado) ----------------- */
 class FiltersSheet extends StatefulWidget{
   final SearchSpec initial; final AppState state;
   const FiltersSheet({super.key,required this.initial,required this.state});
@@ -78,9 +79,9 @@ class _FiltersSheetState extends State<FiltersSheet>{
   Future<void> _addBlock() async {
     final chose = await showModalBottomSheet<String>(
       context: context, builder: (_)=>SafeArea(child: Wrap(children:[
-        ListTile(leading:const Icon(Icons.category), title:const Text('Tipo / Relación'), onTap:(){Navigator.pop(context,'type');}),
-        ListTile(leading:const Icon(Icons.flag),     title:const Text('Estado'),          onTap:(){Navigator.pop(context,'status');}),
-        ListTile(leading:const Icon(Icons.text_fields), title:const Text('Texto'),       onTap:(){Navigator.pop(context,'text');}),
+        ListTile(leading:const Icon(Icons.category),    title:const Text('Tipo / Relación'), onTap:(){Navigator.pop(context,'type');}),
+        ListTile(leading:const Icon(Icons.flag),        title:const Text('Estado'),          onTap:(){Navigator.pop(context,'status');}),
+        ListTile(leading:const Icon(Icons.text_fields), title:const Text('Texto'),           onTap:(){Navigator.pop(context,'text');}),
       ])));
     if(chose==null) return;
     setState(()=>clauses.add(chose=='text'?TextClause():EnumClause(field:chose)));
@@ -131,11 +132,11 @@ class _FiltersSheetState extends State<FiltersSheet>{
             child: Align(
               alignment: Alignment.centerRight,
               child: Wrap(spacing: 2, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                IconButton(tooltip:'Añadir bloque',   onPressed:_addBlock,     icon:const Icon(Icons.add)),
-                IconButton(tooltip:'Exportar búsqueda',onPressed:_exportQuery, icon:const Icon(Icons.upload)),
-                IconButton(tooltip:'Importar búsqueda',onPressed:_importQuery, icon:const Icon(Icons.download)),
-                IconButton(tooltip:'Limpiar',          onPressed:()=>setState(()=>clauses.clear()), icon:const Icon(Icons.clear_all)),
-                IconButton(tooltip:'Aplicar',          onPressed:()=>Navigator.pop(context,SearchSpec(clauses:clauses.map((c)=>c.clone()).toList())), icon:const Icon(Icons.check)),
+                IconButton(tooltip:'Añadir bloque',    onPressed:_addBlock,     icon:const Icon(Icons.add)),
+                IconButton(tooltip:'Exportar búsqueda',onPressed:_exportQuery,  icon:const Icon(Icons.upload)),
+                IconButton(tooltip:'Importar búsqueda',onPressed:_importQuery,  icon:const Icon(Icons.download)),
+                IconButton(tooltip:'Limpiar',           onPressed:()=>setState(()=>clauses.clear()), icon:const Icon(Icons.clear_all)),
+                IconButton(tooltip:'Aplicar',           onPressed:()=>Navigator.pop(context,SearchSpec(clauses:clauses.map((c)=>c.clone()).toList())), icon:const Icon(Icons.check)),
               ]),
             ),
           ),
