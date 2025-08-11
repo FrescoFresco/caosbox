@@ -1,10 +1,11 @@
+// lib/ui/screens/generic_screen.dart
 import 'package:flutter/material.dart';
 import 'package:caosbox/models/enums.dart';
+import 'package:caosbox/models/item.dart';              // ← importa Item
 import '../../config/blocks.dart';
 import '../../state/app_state.dart';
 import '../widgets/item_tile.dart';
 import 'info_modal.dart';
-import 'package:caosbox/models/item.dart';
 
 import '../../search/search_models.dart';
 import '../../search/search_engine.dart';
@@ -71,10 +72,10 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
         final t   = widget.block.type!;
         final src = widget.state.items(t);
 
-        // 1) Combinar filtros + query rápida
+        // Combinar filtros + query rápida
         final effective = _mergeQuick(widget.spec, _q.text);
 
-        // 2) Asegurar lista MATERIALIZADA (no iterable perezoso)
+        // Materializar lista (no iterable perezoso)
         final filtered = List<Item>.from(
           applySearch(widget.state, src, effective),
           growable: false,
@@ -125,7 +126,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
             ),
             const SizedBox(height: 8),
 
-            // 3) Forzar reconciliación estableciendo keys por ítem
+            // Forzar reconciliación con keys estables
             Expanded(
               child: ListView.builder(
                 key: PageStorageKey('list_${t.name}'),
@@ -134,7 +135,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
                   final it = filtered[i];
                   final open = _ex.contains(it.id);
                   return KeyedSubtree(
-                    key: ValueKey(it.id), // <-- clave estable por elemento
+                    key: ValueKey(it.id),
                     child: ItemTile(
                       key: ValueKey('tile_${it.id}'),
                       item: it,
