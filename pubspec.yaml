@@ -1,5 +1,5 @@
 name: caosbox
-description: CaosBox (Beta)
+description: CaosBox (Beta) - JSON-first modular
 publish_to: "none"
 
 environment:
