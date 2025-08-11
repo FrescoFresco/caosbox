@@ -22,12 +22,17 @@ class _CaosAppState extends State<CaosApp> {
   @override void dispose() { st.dispose(); super.dispose(); }
 
   Future<void> _openFilters() async {
+    // PASO CLAVE: trabajar con COPIA dentro del modal
+    final seed = spec.clone();
     final updated = await showModalBottomSheet<SearchSpec>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => FiltersSheet(initial: spec, state: st),
+      builder: (_) => FiltersSheet(initial: seed, state: st),
     );
-    if (updated != null) setState(() => spec = updated);
+    if (updated != null) {
+      // Guardar copia limpia para evitar referencias colgantes
+      setState(() => spec = updated.clone());
+    }
   }
 
   @override
@@ -148,7 +153,13 @@ class FiltersSheet extends StatefulWidget {
 
 class _FiltersSheetState extends State<FiltersSheet> {
   late List<Clause> clauses;
-  @override void initState(){ super.initState(); clauses = [...widget.initial.clauses]; }
+
+  @override
+  void initState() {
+    super.initState();
+    // Trabajar SIEMPRE con clones locales
+    clauses = widget.initial.clauses.map((c) => c.clone()).toList();
+  }
 
   void _addBlock() async {
     await showModalBottomSheet(context: context, builder: (_) {
@@ -186,7 +197,13 @@ class _FiltersSheetState extends State<FiltersSheet> {
                 const SizedBox(width: 8),
                 OutlinedButton(onPressed: ()=>setState(()=>clauses.clear()), child: const Text('Limpiar')),
                 const SizedBox(width: 8),
-                FilledButton(onPressed: ()=>Navigator.pop(context, SearchSpec(clauses: clauses)), child: const Text('Aplicar')),
+                FilledButton(
+                  onPressed: ()=>Navigator.pop(
+                    context,
+                    SearchSpec(clauses: clauses.map((c)=>c.clone()).toList()), // devolver COPIA
+                  ),
+                  child: const Text('Aplicar'),
+                ),
               ]),
             ),
             const Divider(height: 1),
@@ -234,7 +251,7 @@ class _FiltersSheetState extends State<FiltersSheet> {
                         if (ok == true) {
                           try {
                             final spec = importQueryJson(ctrl.text);
-                            setState(() => clauses = [...spec.clauses]);
+                            setState(() => clauses = [...spec.clauses.map((c)=>c.clone())]); // cargar como clones
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Búsqueda cargada')));
                           } catch (e) {
                             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -442,7 +459,8 @@ class _TriPill extends StatelessWidget {
   final Tri mode;
   final VoidCallback onTap;
   const _TriPill({required this.label, required this.mode, required this.onTap});
-  @override Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     Color? bg;
     if (mode == Tri.include) bg = Colors.green.withOpacity(.15);
     if (mode == Tri.exclude) bg = Colors.red.withOpacity(.15);
