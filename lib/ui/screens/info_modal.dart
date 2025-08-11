@@ -4,6 +4,7 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/theme/style.dart';
+import 'package:caosbox/ui/widgets/relation_picker.dart';
 
 String lbl(ItemType t) => t == ItemType.idea ? 'Idea' : 'Acción';
 IconData ico(ItemType t) => t == ItemType.idea ? Icons.lightbulb : Icons.assignment;
@@ -17,6 +18,7 @@ class InfoModal extends StatefulWidget {
   const InfoModal({super.key, required this.id, required this.st});
   @override State<InfoModal> createState()=>_InfoModalState();
 }
+
 class _InfoModalState extends State<InfoModal>{
   late final TextEditingController ed;
   late final TextEditingController note;
@@ -24,7 +26,7 @@ class _InfoModalState extends State<InfoModal>{
 
   @override void initState(){
     super.initState();
-    ed = TextEditingController(text: widget.st.getItem(widget.id)!.text);
+    ed   = TextEditingController(text: widget.st.getItem(widget.id)!.text);
     note = TextEditingController(text: widget.st.note(widget.id));
   }
   @override void dispose(){ _deb?.cancel(); _debN?.cancel(); ed.dispose(); note.dispose(); super.dispose(); }
@@ -33,7 +35,6 @@ class _InfoModalState extends State<InfoModal>{
   Widget build(BuildContext c){
     return AnimatedBuilder(animation: widget.st, builder: (ctx, __) {
       final cur = widget.st.getItem(widget.id)!;
-      final linked = widget.st.all.where((i)=>widget.st.links(widget.id).contains(i.id)).toList();
       final latestNote = widget.st.note(widget.id);
       if (note.text != latestNote) { note.text = latestNote; note.selection = TextSelection.collapsed(offset: note.text.length); }
 
@@ -55,8 +56,8 @@ class _InfoModalState extends State<InfoModal>{
               ),
               const TabBar(tabs: [
                 Tab(icon: Icon(Icons.description), text: 'Contenido'),
-                Tab(icon: Icon(Icons.link), text: 'Relacionado'),
-                Tab(icon: Icon(Icons.timer), text: 'Tiempo'),
+                Tab(icon: Icon(Icons.link),        text: 'Relacionado'),
+                Tab(icon: Icon(Icons.timer),       text: 'Tiempo'),
               ]),
               Expanded(child: TabBarView(children: [
                 // Contenido
@@ -71,22 +72,9 @@ class _InfoModalState extends State<InfoModal>{
                     onChanged: (t) { _deb?.cancel(); _deb = Timer(const Duration(milliseconds: 250), ()=>widget.st.updateText(cur.id, t)); },
                   ),
                 ),
-                // Relacionado: checkbox a la derecha (lista izquierda) y a la izquierda en la derecha (como pediste)
-                ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: widget.st.all.length,
-                  itemBuilder: (ctx, i){
-                    final li = widget.st.all[i];
-                    if (li.id == cur.id) return const SizedBox.shrink();
-                    final ck = widget.st.links(cur.id).contains(li.id);
-                    return ListTile(
-                      title: Text('${li.id} — ${li.text}', maxLines: 1, overflow: TextOverflow.ellipsis),
-                      trailing: Checkbox(value: ck, onChanged: (_)=>widget.st.toggleLink(cur.id, li.id)),
-                      onTap: ()=>widget.st.toggleLink(cur.id, li.id),
-                    );
-                  },
-                ),
-                // Tiempo (nota)
+                // Relacionado (1 panel, anclado a cur.id, checkbox a la derecha)
+                RelationPicker(state: widget.st, twoPane: false, anchorId: cur.id),
+                // Tiempo
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: TextField(
