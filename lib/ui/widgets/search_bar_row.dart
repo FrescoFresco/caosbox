@@ -3,11 +3,16 @@ import 'package:flutter/material.dart';
 class SearchBarRow extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onOpenFilters;
+  final VoidCallback onExportData;   // nuevo
+  final VoidCallback onImportData;   // nuevo
   final String hint;
+
   const SearchBarRow({
     super.key,
     required this.controller,
     required this.onOpenFilters,
+    required this.onExportData,
+    required this.onImportData,
     this.hint = 'Buscar… (usa -palabra para excluir)',
   });
 
@@ -53,6 +58,18 @@ class _SearchBarRowState extends State<SearchBarRow> {
         onPressed: widget.onOpenFilters,
         icon: const Icon(Icons.tune),
         label: const Text('Filtrar'),
+      ),
+      const SizedBox(width: 8),
+      OutlinedButton.icon(
+        onPressed: widget.onExportData,
+        icon: const Icon(Icons.upload),
+        label: const Text('Exportar datos'),
+      ),
+      const SizedBox(width: 8),
+      OutlinedButton.icon(
+        onPressed: widget.onImportData,
+        icon: const Icon(Icons.download),
+        label: const Text('Importar datos'),
       ),
     ]);
   }
