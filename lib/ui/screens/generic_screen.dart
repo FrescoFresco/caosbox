@@ -63,15 +63,21 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
   Widget build(BuildContext ctx) {
     super.build(ctx);
 
-    // ⬇️ FIX: escuchar cambios del estado para re-renderizar al añadir/editar
+    // Escuchamos AppState para refrescar inmediatamente tras add/update
     return AnimatedBuilder(
       animation: widget.state,
       builder: (_, __) {
         final t   = widget.block.type!;
         final src = widget.state.items(t);
 
+        // 1) Combinar filtros + query rápida
         final effective = _mergeQuick(widget.spec, _q.text);
-        final filtered  = applySearch(widget.state, src, effective);
+
+        // 2) Asegurar lista MATERIALIZADA (no iterable perezoso)
+        final filtered = List<Item>.from(
+          applySearch(widget.state, src, effective),
+          growable: false,
+        );
 
         return Padding(
           padding: const EdgeInsets.all(12),
@@ -105,29 +111,39 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
                 if (ok == true) {
                   try {
                     importDataJsonReplace(widget.state, ctrl.text);
-                    if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Datos importados')));
+                    if (mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Datos importados')));
+                    }
                   } catch (e) {
-                    if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    if (mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    }
                   }
                 }
               },
             ),
             const SizedBox(height: 8),
 
+            // 3) Forzar reconciliación estableciendo keys por ítem
             Expanded(
               child: ListView.builder(
+                key: PageStorageKey('list_${t.name}'),
                 itemCount: filtered.length,
                 itemBuilder: (_, i) {
                   final it = filtered[i];
                   final open = _ex.contains(it.id);
-                  return ItemTile(
-                    item: it,
-                    st: widget.state,
-                    expanded: open,
-                    onTap: () { open ? _ex.remove(it.id) : _ex.add(it.id); setState((){}); },
-                    onInfo: () => showInfoModal(ctx, it, widget.state),
-                    swipeable: true,
-                    checkbox: false,
+                  return KeyedSubtree(
+                    key: ValueKey(it.id), // <-- clave estable por elemento
+                    child: ItemTile(
+                      key: ValueKey('tile_${it.id}'),
+                      item: it,
+                      st: widget.state,
+                      expanded: open,
+                      onTap: () { open ? _ex.remove(it.id) : _ex.add(it.id); setState((){}); },
+                      onInfo: () => showInfoModal(ctx, it, widget.state),
+                      swipeable: true,
+                      checkbox: false,
+                    ),
                   );
                 },
               ),
@@ -157,7 +173,10 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
       return Token(p, Tri.include);
     }).toList();
     if (tokens.isEmpty) return base;
-    final quick = TextClause(fields: {'id':Tri.include,'content':Tri.include,'note':Tri.include}, tokens: tokens);
+    final quick = TextClause(
+      fields: {'id':Tri.include,'content':Tri.include,'note':Tri.include},
+      tokens: tokens,
+    );
     return SearchSpec(clauses: [...base.clauses, quick]);
   }
 }
