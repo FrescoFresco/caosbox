@@ -1,30 +1,38 @@
 import 'package:flutter/material.dart';
 
-class SearchBarRow extends StatefulWidget {
+class SearchBar extends StatefulWidget {
   final TextEditingController controller;
-  final VoidCallback onOpenFilters;
-  final VoidCallback onExportData;   // exportar DATOS
-  final VoidCallback onImportData;   // importar DATOS
   final String hint;
+  final VoidCallback? onOpenFilters;   // null = no mostrar botón filtros
+  final VoidCallback? onExportData;    // null = no mostrar export
+  final VoidCallback? onImportData;    // null = no mostrar import
 
-  const SearchBarRow({
+  const SearchBar({
     super.key,
     required this.controller,
-    required this.onOpenFilters,
-    required this.onExportData,
-    required this.onImportData,
     this.hint = 'Buscar… (usa -palabra para excluir)',
+    this.onOpenFilters,
+    this.onExportData,
+    this.onImportData,
   });
 
   @override
-  State<SearchBarRow> createState() => _SearchBarRowState();
+  State<SearchBar> createState() => _SearchBarState();
 }
 
-class _SearchBarRowState extends State<SearchBarRow> {
+class _SearchBarState extends State<SearchBar> {
   @override
-  void initState() { super.initState(); widget.controller.addListener(_onChange); }
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChange);
+  }
+
   @override
-  void dispose() { widget.controller.removeListener(_onChange); super.dispose(); }
+  void dispose() {
+    widget.controller.removeListener(_onChange);
+    super.dispose();
+  }
+
   void _onChange() => setState(() {});
 
   @override
@@ -45,12 +53,18 @@ class _SearchBarRowState extends State<SearchBarRow> {
           ),
         ),
       ),
-      const SizedBox(width: 6),
-      IconButton(tooltip: 'Filtrar (avanzado)', onPressed: widget.onOpenFilters, icon: const Icon(Icons.tune)),
-      const SizedBox(width: 6),
-      IconButton(tooltip: 'Exportar datos', onPressed: widget.onExportData, icon: const Icon(Icons.upload)),
-      const SizedBox(width: 6),
-      IconButton(tooltip: 'Importar datos', onPressed: widget.onImportData, icon: const Icon(Icons.download)),
+      if (widget.onOpenFilters != null) ...[
+        const SizedBox(width: 6),
+        IconButton(tooltip: 'Filtros', onPressed: widget.onOpenFilters, icon: const Icon(Icons.tune)),
+      ],
+      if (widget.onExportData != null) ...[
+        const SizedBox(width: 6),
+        IconButton(tooltip: 'Exportar datos', onPressed: widget.onExportData, icon: const Icon(Icons.upload)),
+      ],
+      if (widget.onImportData != null) ...[
+        const SizedBox(width: 6),
+        IconButton(tooltip: 'Importar datos', onPressed: widget.onImportData, icon: const Icon(Icons.download)),
+      ],
     ]);
   }
 }
