@@ -32,9 +32,7 @@ class _CaosAppState extends State<CaosApp> {
       context: ctx, isScrollControlled: true,
       builder: (_) => FiltersSheet(initial: seed, state: st),
     );
-    if (updated != null) {
-      setState(()=> _specs[type] = updated.clone());
-    }
+    if (updated != null) setState(()=> _specs[type] = updated.clone());
   }
 
   @override
@@ -148,7 +146,7 @@ class _FiltersSheetState extends State<FiltersSheet>{
       context: context, builder: (_)=>SafeArea(child: Wrap(children:[
         ListTile(leading:const Icon(Icons.category),    title:const Text('Tipo (enum)'),   onTap:(){Navigator.pop(context,'type');}),
         ListTile(leading:const Icon(Icons.flag),        title:const Text('Estado (enum)'), onTap:(){Navigator.pop(context,'status');}),
-        // (Relación se controla dentro de Tipo; no se añade aquí)
+        // Relación ya no se añade; va dentro de Tipo
         ListTile(leading:const Icon(Icons.text_fields), title:const Text('Texto'),         onTap:(){Navigator.pop(context,'text');}),
       ])));
     if(chose==null) return;
@@ -203,6 +201,7 @@ class _FiltersSheetState extends State<FiltersSheet>{
         expand:false, initialChildSize:.9,
         builder:(_,ctrl)=>Material(
           child: Column(children:[
+            // Cabecera compacta (solo iconos)
             Padding(
               padding: const EdgeInsets.fromLTRB(8,8,8,8),
               child: Align(
@@ -284,7 +283,7 @@ class _ClauseEditorState extends State<_ClauseEditor>{
   Widget _body(Clause c){
     if(c is EnumClause){
       if(c.field=='type'){
-        // chips de tipo + relación (con/sin enlaces) gestionada como cláusula aparte
+        // chips de tipo (idea / action)
         final values = ['idea','action'];
         final chipsTipo = values.map((v)=>_TriPill(
           label:v, mode:_mode(c,v),
@@ -297,46 +296,29 @@ class _ClauseEditorState extends State<_ClauseEditor>{
           },
         ));
 
-        Tri _invert(Tri m)=>switch(m){Tri.include=>Tri.exclude,Tri.exclude=>Tri.include,_=>Tri.off};
+        // chip único de relación: "Enlaces" (off/include/exclude)
         final hl = widget.readHasLinks?.call();
-        final m  = hl==null ? Tri.off : _mode(hl,'true');
+        final mode = hl==null ? Tri.off : _mode(hl,'true');
+        final chipEnlaces = _TriPill(
+          label:'Enlaces',
+          mode:mode,
+          onTap:(){
+            final next=_next(mode);
+            EnumClause? nv;
+            if(next!=Tri.off){
+              nv = EnumClause(field:'hasLinks');
+              if(next==Tri.include) nv.include.add('true'); // con enlaces
+              if(next==Tri.exclude) nv.exclude.add('true'); // sin enlaces
+            }
+            widget.writeHasLinks?.call(nv); // crea/actualiza/elimina la cláusula
+            setState((){});                 // refresca subtítulo
+          },
+        );
 
-        final chipsRel = [
-          _TriPill(
-            label:'Con enlaces', mode:m,
-            onTap:(){
-              final next=_next(m);
-              EnumClause? nv;
-              if(next!=Tri.off){
-                nv = EnumClause(field:'hasLinks');
-                if(next==Tri.include) nv.include.add('true');
-                if(next==Tri.exclude) nv.exclude.add('true');
-              }
-              widget.writeHasLinks?.call(nv);
-              setState((){});
-            },
-          ),
-          _TriPill(
-            label:'Sin enlaces', mode:_invert(m),
-            onTap:(){
-              final next=_next(_invert(m));           // ciclo del complementario
-              final write = _invert(next);            // map al real
-              EnumClause? nv;
-              if(write!=Tri.off){
-                nv = EnumClause(field:'hasLinks');
-                if(write==Tri.include) nv.include.add('true');
-                if(write==Tri.exclude) nv.exclude.add('true');
-              }
-              widget.writeHasLinks?.call(nv);
-              setState((){});
-            },
-          ),
-        ];
-
-        return Wrap(spacing:8,runSpacing:8,children:[...chipsTipo, const SizedBox(width:16), ...chipsRel]);
+        return Wrap(spacing:8,runSpacing:8,children:[...chipsTipo, const SizedBox(width:16), chipEnlaces]);
       }
 
-      // Estado (enum) o (hasLinks en caso de venir en query importada)
+      // Estado (enum) o (hasLinks si viene en JSON importado)
       final values = switch(c.field){ 'status'=>['normal','completed','archived'], 'hasLinks'=>['true'], _=> <String>[] };
       return Wrap(spacing:8,runSpacing:8,children:[
         for(final v in values)
