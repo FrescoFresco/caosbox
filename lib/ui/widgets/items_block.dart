@@ -8,7 +8,7 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 
-import 'package:caosbox/ui/widgets/search_bar_row.dart';
+import 'package:caosbox/ui/widgets/search_bar.dart';
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/widgets/item_tile.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
@@ -18,33 +18,15 @@ enum CheckboxSide { none, left, right }
 
 class ItemsBlock extends StatefulWidget {
   final AppState state;
-
-  /// Tipos a mostrar. Si es null, muestra todos los ítems.
   final Set<ItemType>? types;
-
-  /// Filtros por pestaña (para modo list). En select/link normalmente vacío.
   final SearchSpec spec;
-
-  /// Búsqueda rápida (de esta instancia de bloque).
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-
-  /// Abrir filtros avanzados (puede ser no-op en select/link).
   final VoidCallback onOpenFilters;
-
-  /// Mostrar el ComposerCard (solo Ideas/Acciones).
   final bool showComposer;
-
-  /// Modo de comportamiento (lista, seleccionar ancla, vincular al ancla).
   final ItemsBlockMode mode;
-
-  /// ID ancla para modo link (obligatorio en link).
   final String? anchorId;
-
-  /// Dónde aparece el checkbox, según modo.
   final CheckboxSide checkboxSide;
-
-  /// Selección actual (para modo select). Single-select.
   final String? selectedId;
   final ValueChanged<String?>? onSelect;
 
@@ -90,29 +72,19 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
   }
 
   @override
-  void dispose() {
-    _q.dispose();
-    _composer.dispose();
-    super.dispose();
-  }
-
-  @override
-  bool get wantKeepAlive => true;
+  void dispose() { _q.dispose(); _composer.dispose(); super.dispose(); }
+  @override bool get wantKeepAlive => true;
 
   List<Item> _sourceByTypes() {
     if (widget.types == null) return widget.state.all;
     final out = <Item>[];
-    for (final t in widget.types!) {
-      out.addAll(widget.state.items(t));
-    }
+    for (final t in widget.types!) { out.addAll(widget.state.items(t)); }
     return out;
   }
 
   SearchSpec _mergeQuick(SearchSpec base, String q) {
     final parts = q.trim().isEmpty ? <String>[] : q.trim().split(RegExp(r'\s+'));
-    final tokens = parts.map((p) =>
-      p.startsWith('-') && p.length > 1 ? Token(p.substring(1), Tri.exclude) : Token(p, Tri.include)
-    ).toList();
+    final tokens = parts.map((p) => p.startsWith('-') && p.length > 1 ? Token(p.substring(1), Tri.exclude) : Token(p, Tri.include)).toList();
     if (tokens.isEmpty) return base;
     final quick = TextClause(fields: {'id':Tri.include,'content':Tri.include,'note':Tri.include}, tokens: tokens);
     return SearchSpec(clauses: [...base.clauses, quick]);
@@ -124,14 +96,11 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
     return AnimatedBuilder(
       animation: widget.state,
       builder: (_, __) {
-        // Base data
         final srcAll = _sourceByTypes();
-
-        // Filtro (solo se aplica en cualquier modo para consistencia)
         final effective = _mergeQuick(widget.spec, _q.text);
         final filtered = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
-        // Header: buscador + IO datos
+        // defino callbacks IO (solo si se pasan al buscador)
         final onExportData = () {
           final json = exportDataJson(widget.state);
           _showLong(context, 'Datos (JSON)', json);
@@ -143,90 +112,73 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
             builder: (dctx) => AlertDialog(
               title: const Text('Importar datos (reemplaza)'),
               content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-              actions: [
-                TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
-              ],
+              actions: [ TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
+                         FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')) ],
             ),
           );
           if (ok == true) {
-            try {
-              importDataJsonReplace(widget.state, ctrl.text);
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos importados')));
-            } catch (e) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-            }
+            try { importDataJsonReplace(widget.state, ctrl.text); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos importados'))); }
+            catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'))); }
           }
         };
 
-        // Composer visible solo en modo list y cuando está habilitado
         final showComposer = widget.showComposer && widget.mode == ItemsBlockMode.list;
+
+        // Config del buscador único según el contexto:
+        final showFilters = widget.mode == ItemsBlockMode.list; // solo en listas de Ideas/Acciones
+        final showDataIO  = widget.mode == ItemsBlockMode.list; // IO solo en listas principales
 
         return Padding(
           padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              SearchBarRow(
-                controller: _q,
-                onOpenFilters: widget.onOpenFilters,
-                onExportData: onExportData,
-                onImportData: onImportData,
-              ),
-              if (showComposer) ...[
-                const SizedBox(height: 12),
-                ComposerCard(
-                  icon: _composerIcon(),
-                  hint: _composerHint(),
-                  controller: _composer,
-                  onAdd: () {
-                    final t = _singleTypeOrNull();
-                    if (t != null) {
-                      widget.state.add(t, _composer.text);
-                      _composer.clear();
-                    }
-                  },
-                  onCancel: () { _composer.clear(); },
-                ),
-              ],
-              const SizedBox(height: 8),
-              Expanded(
-                child: widget.mode == ItemsBlockMode.list
-                    ? _buildListMode(filtered)
-                    : _buildSelectOrLinkMode(filtered),
+          child: Column(children: [
+            SearchBar(
+              controller: _q,
+              onOpenFilters: showFilters ? widget.onOpenFilters : null,
+              onExportData:  showDataIO  ? onExportData : null,
+              onImportData:  showDataIO  ? onImportData : null,
+            ),
+            if (showComposer) ...[
+              const SizedBox(height: 12),
+              ComposerCard(
+                icon: _composerIcon(),
+                hint: _composerHint(),
+                controller: _composer,
+                onAdd: () { final t = _singleTypeOrNull(); if (t!=null){ widget.state.add(t, _composer.text); _composer.clear(); } },
+                onCancel: () { _composer.clear(); },
               ),
             ],
-          ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: widget.mode == ItemsBlockMode.list
+                  ? _buildListMode(filtered)
+                  : _buildSelectOrLinkMode(filtered),
+            ),
+          ]),
         );
       },
     );
   }
 
-  // ========== List Mode (usa ItemTile y expansión) ==========
   Widget _buildListMode(List<Item> items) {
     return ListView.builder(
       key: const PageStorageKey('items_list_mode'),
       itemCount: items.length,
       itemBuilder: (_, i) {
-        final it = items[i];
-        final open = _expanded.contains(it.id);
+        final it = items[i]; final open = _expanded.contains(it.id);
         return KeyedSubtree(
           key: ValueKey(it.id),
           child: ItemTile(
             key: ValueKey('tile_${it.id}'),
-            item: it,
-            st: widget.state,
-            expanded: open,
+            item: it, st: widget.state, expanded: open,
             onTap: () { open ? _expanded.remove(it.id) : _expanded.add(it.id); setState((){}); },
             onInfo: () => showInfoModal(context, it, widget.state),
-            swipeable: true,
-            checkbox: false,
+            swipeable: true, checkbox: false,
           ),
         );
       },
     );
   }
 
-  // ========== Select/Link Mode (lista con checkbox lateral) ==========
   Widget _buildSelectOrLinkMode(List<Item> items) {
     final anchor = widget.mode == ItemsBlockMode.link ? widget.anchorId : null;
     return ListView.builder(
@@ -234,13 +186,9 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
       itemCount: items.length,
       itemBuilder: (_, i) {
         final it = items[i];
-
-        // No mostrar el ancla en la lista de vincular
         if (anchor != null && it.id == anchor) return const SizedBox.shrink();
 
-        bool checked = false;
-        VoidCallback? onTap;
-        Widget? leading, trailing;
+        bool checked = false; VoidCallback? onTap; Widget? leading, trailing;
 
         if (widget.mode == ItemsBlockMode.select) {
           checked = (widget.selectedId == it.id);
@@ -249,7 +197,6 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
           leading  = widget.checkboxSide == CheckboxSide.left  ? cb : null;
           trailing = widget.checkboxSide == CheckboxSide.right ? cb : null;
         } else {
-          // link
           checked = anchor != null && widget.state.links(anchor).contains(it.id);
           onTap = () => widget.state.toggleLink(anchor!, it.id);
           final cb = Checkbox(value: checked, onChanged: (_)=> onTap?.call());
@@ -259,8 +206,7 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
 
         return ListTile(
           key: ValueKey('li_${anchor ?? "sel"}_${it.id}'),
-          leading: leading,
-          trailing: trailing,
+          leading: leading, trailing: trailing,
           title: Text('${it.id} — ${it.text}', maxLines: 1, overflow: TextOverflow.ellipsis),
           onTap: onTap,
         );
@@ -273,19 +219,15 @@ class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMi
     if (t == ItemType.idea) return 'Escribe tu idea...';
     if (t == ItemType.action) return 'Describe la acción...';
     return 'Añadir...';
-    }
-
+  }
   IconData _composerIcon() {
     final t = _singleTypeOrNull();
     if (t == ItemType.idea) return Icons.lightbulb;
     if (t == ItemType.action) return Icons.assignment;
     return Icons.add;
   }
-
   ItemType? _singleTypeOrNull() {
-    final ts = widget.types;
-    if (ts == null || ts.length != 1) return null;
-    return ts.first;
+    final ts = widget.types; if (ts == null || ts.length != 1) return null; return ts.first;
   }
 
   void _showLong(BuildContext context, String title, String text) {
