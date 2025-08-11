@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/app/state/app_state.dart';
-import 'package:caosbox/ui/screens/generic_screen.dart';
 import 'package:caosbox/ui/screens/links_block.dart';
 
 typedef ScreenBuilder = Widget Function(BuildContext, AppState);
@@ -28,8 +27,9 @@ class Block {
   }) : type = null;
 }
 
+// Nota: lista 'final' (no const) para permitir el closure en Block.custom
 final blocks = <Block>[
-  const Block.item(id: 'ideas',   icon: Icons.lightbulb, label: 'Ideas',    type: ItemType.idea),
+  const Block.item(id: 'ideas',   icon: Icons.lightbulb,  label: 'Ideas',    type: ItemType.idea),
   const Block.item(id: 'actions', icon: Icons.assignment, label: 'Acciones', type: ItemType.action),
-  const Block.custom(id: 'links', icon: Icons.link, label: 'Enlaces',       custom: (ctx, st) => LinksBlock(state: st)),
+  Block.custom(id: 'links', icon: Icons.link, label: 'Enlaces', custom: (ctx, st) => LinksBlock(state: st)),
 ];
