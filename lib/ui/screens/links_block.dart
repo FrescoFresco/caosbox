@@ -1,13 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:caosbox/app/state/app_state.dart';
-import 'package:caosbox/ui/widgets/relation_picker.dart';
+import 'package:caosbox/domain/search/search_models.dart';
+import 'package:caosbox/ui/widgets/items_block.dart';
 
-class LinksBlock extends StatelessWidget {
+class LinksBlock extends StatefulWidget {
   final AppState state;
   const LinksBlock({super.key, required this.state});
 
   @override
+  State<LinksBlock> createState() => _LinksBlockState();
+}
+
+class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
+  String? _selected;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
+
+    // En enlaces no usamos filtros avanzados → noop
+    void _noop(){}
+
+    final left = Expanded(
+      child: ItemsBlock(
+        key: const ValueKey('links_left'),
+        state: widget.state,
+        types: null,                         // todos los ítems
+        spec: const SearchSpec(),            // sin cláusulas
+        quickQuery: '',                      // búsqueda propia
+        onQuickQuery: (_) {},
+        onOpenFilters: _noop,
+        showComposer: false,
+        mode: ItemsBlockMode.select,
+        selectedId: _selected,
+        onSelect: (id)=> setState(()=> _selected = id),
+        checkboxSide: CheckboxSide.right,    // ✔ checkbox a la derecha (selección)
+      ),
+    );
+
+    final right = Expanded(
+      child: ItemsBlock(
+        key: ValueKey('links_right_${_selected ?? "none"}'),
+        state: widget.state,
+        types: null,                         // todos los ítems
+        spec: const SearchSpec(),
+        quickQuery: '',
+        onQuickQuery: (_) {},
+        onOpenFilters: _noop,
+        showComposer: false,
+        mode: ItemsBlockMode.link,
+        anchorId: _selected,                 // ancla seleccionada
+        checkboxSide: CheckboxSide.left,     // ✔ checkbox a la izquierda (conectar)
+      ),
+    );
+
     return SafeArea(
       child: Column(children: [
         const Padding(
@@ -18,7 +67,13 @@ class LinksBlock extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-        Expanded(child: RelationPicker(state: state, twoPane: true)),
+        Expanded(
+          child: OrientationBuilder(
+            builder: (ctx, o) => o == Orientation.portrait
+                ? Column(children: [left, const Divider(height: 1), right])
+                : Row(children: [left, const VerticalDivider(width: 1), right]),
+          ),
+        ),
       ]),
     );
   }
