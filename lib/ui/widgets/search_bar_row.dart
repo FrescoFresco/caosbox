@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// Buscador unificado de la app (NO el de Flutter).
+/// - Soporta: limpiar, abrir filtros, exportar/importar datos.
+/// - Úsalo con un TextEditingController externo.
 class SearchBar extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
-  final VoidCallback? onOpenFilters;   // null = no mostrar botón filtros
-  final VoidCallback? onExportData;    // null = no mostrar export
-  final VoidCallback? onImportData;    // null = no mostrar import
+  final VoidCallback? onOpenFilters;   // si es null, no muestra botón
+  final VoidCallback? onExportData;    // si es null, no muestra botón
+  final VoidCallback? onImportData;    // si es null, no muestra botón
 
   const SearchBar({
     super.key,
