@@ -7,7 +7,7 @@ import 'info_modal.dart';
 
 import '../../search/search_models.dart';
 import '../../search/search_engine.dart';
-import '../../search/search_io.dart';              // para exportar/importar DATOS
+import '../../search/search_io.dart';              // exportar/importar DATOS
 import '../widgets/search_bar_row.dart';
 
 class GenericScreen extends StatefulWidget {
@@ -62,72 +62,79 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
   @override
   Widget build(BuildContext ctx) {
     super.build(ctx);
-    final t = widget.block.type!;
-    final src = widget.state.items(t);
 
-    final effective = _mergeQuick(widget.spec, _q.text);
-    final filtered  = applySearch(widget.state, src, effective);
+    // ⬇️ FIX: escuchar cambios del estado para re-renderizar al añadir/editar
+    return AnimatedBuilder(
+      animation: widget.state,
+      builder: (_, __) {
+        final t   = widget.block.type!;
+        final src = widget.state.items(t);
 
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(children: [
-        SearchBarRow(
-          controller: _q,
-          onOpenFilters: () => widget.onOpenFilters(ctx, t),
-          onExportData: () {
-            final json = exportDataJson(widget.state);
-            _showLong(ctx, 'Datos (JSON)', json);
-          },
-          onImportData: () async {
-            final ctrl = TextEditingController();
-            final ok = await showDialog<bool>(
-              context: ctx,
-              builder: (dctx) => AlertDialog(
-                title: const Text('Importar datos (reemplaza)'),
-                content: TextField(
-                  controller: ctrl, maxLines: 14,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'Pega aquí el JSON de datos…',
+        final effective = _mergeQuick(widget.spec, _q.text);
+        final filtered  = applySearch(widget.state, src, effective);
+
+        return Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(children: [
+            SearchBarRow(
+              controller: _q,
+              onOpenFilters: () => widget.onOpenFilters(ctx, t),
+              onExportData: () {
+                final json = exportDataJson(widget.state);
+                _showLong(ctx, 'Datos (JSON)', json);
+              },
+              onImportData: () async {
+                final ctrl = TextEditingController();
+                final ok = await showDialog<bool>(
+                  context: ctx,
+                  builder: (dctx) => AlertDialog(
+                    title: const Text('Importar datos (reemplaza)'),
+                    content: TextField(
+                      controller: ctrl, maxLines: 14,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Pega aquí el JSON de datos…',
+                      ),
+                    ),
+                    actions: [
+                      TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
+                      FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
+                    ],
                   ),
-                ),
-                actions: [
-                  TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                  FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
-                ],
-              ),
-            );
-            if (ok == true) {
-              try {
-                importDataJsonReplace(widget.state, ctrl.text);
-                if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Datos importados')));
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            }
-          },
-        ),
-        const SizedBox(height: 8),
+                );
+                if (ok == true) {
+                  try {
+                    importDataJsonReplace(widget.state, ctrl.text);
+                    if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Datos importados')));
+                  } catch (e) {
+                    if (mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  }
+                }
+              },
+            ),
+            const SizedBox(height: 8),
 
-        Expanded(
-          child: ListView.builder(
-            itemCount: filtered.length,
-            itemBuilder: (_, i) {
-              final it = filtered[i];
-              final open = _ex.contains(it.id);
-              return ItemTile(
-                item: it,
-                st: widget.state,
-                expanded: open,
-                onTap: () { open ? _ex.remove(it.id) : _ex.add(it.id); setState((){}); },
-                onInfo: () => showInfoModal(ctx, it, widget.state),
-                swipeable: true,
-                checkbox: false,
-              );
-            },
-          ),
-        ),
-      ]),
+            Expanded(
+              child: ListView.builder(
+                itemCount: filtered.length,
+                itemBuilder: (_, i) {
+                  final it = filtered[i];
+                  final open = _ex.contains(it.id);
+                  return ItemTile(
+                    item: it,
+                    st: widget.state,
+                    expanded: open,
+                    onTap: () { open ? _ex.remove(it.id) : _ex.add(it.id); setState((){}); },
+                    onInfo: () => showInfoModal(ctx, it, widget.state),
+                    swipeable: true,
+                    checkbox: false,
+                  );
+                },
+              ),
+            ),
+          ]),
+        );
+      },
     );
   }
 
