@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:caosbox/models/enums.dart';
 import 'config/blocks.dart';
-import 'models/enums.dart';
 import 'state/app_state.dart';
 import 'ui/screens/generic_screen.dart';
 import 'search/search_models.dart';
@@ -96,7 +96,7 @@ class _HomeScaffoldState extends State<_HomeScaffold>{
                 spec: widget.getSpec(b.type!),
                 quickQuery: widget.getQuery(b.type!),
                 onQuickQuery:(q)=>widget.setQuery(b.type!, q),
-                onOpenFilters:(ctx, t)=>widget.onOpenFilters(ctx, t),
+                onOpenFilters:(BuildContext ctx, ItemType t)=>widget.onOpenFilters(ctx, t),
               )
             : b.custom!(context, widget.st),
       ])),
@@ -148,14 +148,14 @@ class _FiltersSheetState extends State<FiltersSheet>{
       context: context, builder: (_)=>SafeArea(child: Wrap(children:[
         ListTile(leading:const Icon(Icons.category),    title:const Text('Tipo (enum)'),   onTap:(){Navigator.pop(context,'type');}),
         ListTile(leading:const Icon(Icons.flag),        title:const Text('Estado (enum)'), onTap:(){Navigator.pop(context,'status');}),
-        // ⚠️ Eliminado: opción separada de "Relación"
+        // (Relación se controla dentro de Tipo; no se añade aquí)
         ListTile(leading:const Icon(Icons.text_fields), title:const Text('Texto'),         onTap:(){Navigator.pop(context,'text');}),
       ])));
     if(chose==null) return;
     setState(()=>clauses.add(chose=='text'?TextClause():EnumClause(field:chose)));
   }
 
-  // helpers para leer/escribir el "cláusula hasLinks" desde el bloque Tipo
+  // helpers para hasLinks (gestión desde bloque Tipo)
   EnumClause? _readHasLinks(){
     for(final c in clauses){ if(c is EnumClause && c.field=='hasLinks') return c; }
     return null;
@@ -168,10 +168,7 @@ class _FiltersSheetState extends State<FiltersSheet>{
         if(c is EnumClause && c.field=='hasLinks'){ idx=i; break; }
       }
       if(v==null){ if(idx!=-1) clauses.removeAt(idx); }
-      else{
-        if(idx==-1) clauses.add(v);
-        else clauses[idx]=v;
-      }
+      else{ if(idx==-1) clauses.add(v); else clauses[idx]=v; }
     });
   }
 
@@ -250,8 +247,8 @@ class _FiltersSheetState extends State<FiltersSheet>{
 /* ===== Editor de bloque ===== */
 class _ClauseEditor extends StatefulWidget{
   final Clause clause; final VoidCallback onRemove; final ValueChanged<Clause> onUpdate;
-  final EnumClause? Function()? readHasLinks;        // ← acceso a cláusula hasLinks
-  final void Function(EnumClause?)? writeHasLinks;   // ← modificar/crear/eliminar hasLinks
+  final EnumClause? Function()? readHasLinks;
+  final void Function(EnumClause?)? writeHasLinks;
   const _ClauseEditor({required this.clause,required this.onRemove,required this.onUpdate,this.readHasLinks,this.writeHasLinks});
   @override State<_ClauseEditor> createState()=>_ClauseEditorState();
 }
@@ -287,7 +284,7 @@ class _ClauseEditorState extends State<_ClauseEditor>{
   Widget _body(Clause c){
     if(c is EnumClause){
       if(c.field=='type'){
-        // chips de tipo + chips de relación (con/sin enlaces) gestionados como cláusula aparte
+        // chips de tipo + relación (con/sin enlaces) gestionada como cláusula aparte
         final values = ['idea','action'];
         final chipsTipo = values.map((v)=>_TriPill(
           label:v, mode:_mode(c,v),
@@ -316,14 +313,14 @@ class _ClauseEditorState extends State<_ClauseEditor>{
                 if(next==Tri.exclude) nv.exclude.add('true');
               }
               widget.writeHasLinks?.call(nv);
-              setState((){}); // refrescar subtítulo
+              setState((){});
             },
           ),
           _TriPill(
             label:'Sin enlaces', mode:_invert(m),
             onTap:(){
-              final next=_next(_invert(m));           // ciclamos el complementario
-              final write = _invert(next);            // mapeo al real
+              final next=_next(_invert(m));           // ciclo del complementario
+              final write = _invert(next);            // map al real
               EnumClause? nv;
               if(write!=Tri.off){
                 nv = EnumClause(field:'hasLinks');
@@ -339,7 +336,7 @@ class _ClauseEditorState extends State<_ClauseEditor>{
         return Wrap(spacing:8,runSpacing:8,children:[...chipsTipo, const SizedBox(width:16), ...chipsRel]);
       }
 
-      // Estado (enum)
+      // Estado (enum) o (hasLinks en caso de venir en query importada)
       final values = switch(c.field){ 'status'=>['normal','completed','archived'], 'hasLinks'=>['true'], _=> <String>[] };
       return Wrap(spacing:8,runSpacing:8,children:[
         for(final v in values)
