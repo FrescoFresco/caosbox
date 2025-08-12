@@ -3,14 +3,14 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/ui/widgets/content_block.dart';
 
-/// Usa el MISMO buscador + MISMO modal de filtros que B1/B2.
-/// Se le inyecta el callback [onOpenFilters] (el que ya usas en Ideas/Acciones)
-/// y se reaprovecha en las dos columnas.
+/// Enlaces: usa el MISMO modal de filtros avanzados que B1/B2.
+/// Le inyectamos el callback [onOpenFilters] y lo reutilizamos en ambas columnas.
 class LinksBlock extends StatefulWidget {
   final AppState state;
 
-  /// Callback que abre tu modal de “Búsqueda avanzada” (el de B1/B2).
-  /// Ej.: (ctx) => openAdvancedFilters(ctx) o similar.
+  /// Callback que abre tu modal de “Búsqueda avanzada” (el mismo de Ideas/Acciones).
+  /// Ejemplo de uso al construir:
+  ///   onOpenFilters: (ctx) => openAdvancedFilters(ctx),
   final Future<void> Function(BuildContext) onOpenFilters;
 
   const LinksBlock({
@@ -25,6 +25,8 @@ class LinksBlock extends StatefulWidget {
 
 class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
   String? _selected;
+
+  // Cada columna mantiene su query rápida y spec (independientes).
   String _leftQuery  = '';
   String _rightQuery = '';
   SearchSpec _leftSpec  = const SearchSpec();
@@ -45,7 +47,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: _leftSpec,
         quickQuery: _leftQuery,
         onQuickQuery: (q) => setState(() => _leftQuery = q),
-        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal
+        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal que B1/B2
         showComposer: false,
         mode: ContentBlockMode.select,
         selectedId: _selected,
@@ -62,7 +64,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: _rightSpec,
         quickQuery: _rightQuery,
         onQuickQuery: (q) => setState(() => _rightQuery = q),
-        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal
+        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal que B1/B2
         showComposer: false,
         mode: ContentBlockMode.link,
         anchorId: _selected,
