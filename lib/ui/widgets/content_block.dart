@@ -24,7 +24,7 @@ class ContentBlock extends StatefulWidget {
   final SearchSpec spec;
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-  final VoidCallback onOpenFilters;
+  final VoidCallback onOpenFilters; // ← se usará en TODAS las vistas
   final bool showComposer;
   final ContentBlockMode mode;
   final String? anchorId;
@@ -101,6 +101,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         final effective = _mergeQuick(widget.spec, _q.text);
         final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
+        // IO de datos (solo en listas principales)
         final onExportData = () {
           final json = exportDataJson(widget.state);
           _showLong(context, 'Datos (JSON)', json);
@@ -125,15 +126,17 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         };
 
         final showComposer = widget.showComposer && widget.mode == ContentBlockMode.list;
-        final showFilters  = widget.mode == ContentBlockMode.list;
-        final showDataIO   = widget.mode == ContentBlockMode.list;
+        // 🔁 Buscador SIEMPRE igual: muestra botón de filtros en todos los modos
+        final showFilters = true;
+        // IO sólo para Ideas/Acciones
+        final showDataIO  = widget.mode == ContentBlockMode.list;
 
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Column(children: [
             cx.SearchBar(
               controller: _q,
-              onOpenFilters: showFilters ? widget.onOpenFilters : null,
+              onOpenFilters: showFilters ? widget.onOpenFilters : null, // ← ahora nunca es null
               onExportData:  showDataIO  ? onExportData : null,
               onImportData:  showDataIO  ? onImportData : null,
             ),
@@ -166,24 +169,19 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
       itemCount: items.length,
       itemBuilder: (_, i) {
         final it = items[i];
-        // En modo link no mostramos el propio ancla
         if (widget.mode == ContentBlockMode.link && widget.anchorId != null && it.id == widget.anchorId) {
           return const SizedBox.shrink();
         }
 
         final hasLinks = widget.state.links(it.id).isNotEmpty;
 
-        // Status → color franja
         final Color statusColor = switch (it.status) {
           ItemStatus.completed => Colors.green,
           ItemStatus.archived  => Colors.grey,
           _ => Colors.transparent,
         };
-
-        // Tipo → icono
         final IconData typeIcon = it.type == ItemType.idea ? Icons.lightbulb : Icons.assignment;
 
-        // Checkbox y comportamiento por modo
         bool checked = false;
         VoidCallback? onToggleCheck;
 
@@ -193,19 +191,15 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         } else if (widget.mode == ContentBlockMode.link) {
           final anchor = widget.anchorId;
           checked = anchor != null && widget.state.links(anchor).contains(it.id);
-          onToggleCheck = () {
-            if (anchor != null) widget.state.toggleLink(anchor, it.id);
-          };
+          onToggleCheck = () { if (anchor != null) widget.state.toggleLink(anchor, it.id); };
         }
 
         Future<void> _swipeStartToEnd() async {
-          // completar/normal
           final s = it.status;
           final next = s == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed;
           widget.state.setStatus(it.id, next);
         }
         Future<void> _swipeEndToStart() async {
-          // archivar/normal
           final s = it.status;
           final next = s == ItemStatus.archived ? ItemStatus.normal : ItemStatus.archived;
           widget.state.setStatus(it.id, next);
