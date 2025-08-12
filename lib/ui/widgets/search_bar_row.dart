@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:caosbox/ui/widgets/search_bar.dart';
+import 'package:caosbox/ui/widgets/caos_search_bar.dart';
 
-/// Wrapper para mantener compatibilidad con código existente.
-/// Internamente usa el buscador unificado `SearchBar`.
+/// Wrapper de compatibilidad: mismo API que usabas antes.
 class SearchBarRow extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
@@ -21,7 +20,7 @@ class SearchBarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SearchBar(
+    return CaosSearchBar(
       controller: controller,
       hint: hint,
       onOpenFilters: onOpenFilters,
