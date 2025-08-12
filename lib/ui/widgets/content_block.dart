@@ -19,33 +19,15 @@ enum CheckboxSide { none, left, right }
 
 class ContentBlock extends StatefulWidget {
   final AppState state;
-
-  /// Tipos a mostrar. null = todos (para enlaces y modal)
   final Set<ItemType>? types;
-
-  /// Filtros por pestaña (para Ideas/Acciones). En select/link suele ser vacío.
   final SearchSpec spec;
-
-  /// Búsqueda rápida local del bloque
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-
-  /// Abrir filtros avanzados (sólo útil en listas principales)
   final VoidCallback onOpenFilters;
-
-  /// Mostrar el ComposerCard (alta) – sólo en listas principales
   final bool showComposer;
-
-  /// Modo de comportamiento
   final ContentBlockMode mode;
-
-  /// ID ancla para modo link (obligatorio en link)
   final String? anchorId;
-
-  /// Dónde va el checkbox (para select/link)
   final CheckboxSide checkboxSide;
-
-  /// Selección actual (en modo select)
   final String? selectedId;
   final ValueChanged<String?>? onSelect;
 
@@ -118,7 +100,6 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         final effective = _mergeQuick(widget.spec, _q.text);
         final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
-        // callbacks IO (sólo en listas principales)
         final onExportData = () {
           final json = exportDataJson(widget.state);
           _showLong(context, 'Datos (JSON)', json);
@@ -176,7 +157,6 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
   Widget _buildList(List<Item> items) {
     switch (widget.mode) {
       case ContentBlockMode.list:
-        // Lista “lectura/expansión” con Material puro (ExpansionTile)
         return ListView.builder(
           itemCount: items.length,
           itemBuilder: (_, i) {
@@ -195,6 +175,12 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
                 if (hasLinks) const Icon(Icons.link, size: 16, color: Colors.blue),
                 if (hasLinks) const SizedBox(width: 6),
                 Text(it.id, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Detalles',
+                  icon: const Icon(Icons.info_outline, size: 18),
+                  onPressed: () => showInfoModal(context, it, widget.state),
+                ),
               ]),
               subtitle: Text(
                 it.text,
@@ -211,10 +197,8 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
                   ),
                 ),
               ],
-              onLongPress: () => showInfoModal(context, it, widget.state),
             );
 
-            // Swipe opcional con Dismissible → estado (check/archive)
             tile = Dismissible(
               key: Key('sw_${it.id}_${it.status.name}'),
               confirmDismiss: (d) async {
