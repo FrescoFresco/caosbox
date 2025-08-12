@@ -3,16 +3,18 @@ import 'package:flutter/material.dart';
 /// Lado del checkbox (o ninguno).
 enum TileCheckboxSide { none, left, right }
 
-/// Bloque visual único (sin expandible):
-/// - Card + InkWell (long-press abre detalles)
-/// - Swipe: start→end (completar/normal), end→start (archivar/normal)
-/// - Checkbox opcional (izq/der) para select/link
-/// - Franja de estado (2–3 px) en el borde izquierdo
+/// Bloque visual único sin expandibles:
+/// - Card + ListTile (Material nativo)
+/// - Long-press abre detalles
+/// - Swipe start→end = completar/normal; end→start = archivar/normal
+/// - Checkbox opcional a izquierda/derecha (select/link)
 class ContentTile extends StatelessWidget {
   final String id;
   final String text;
   final IconData typeIcon;
   final bool hasLinks;
+
+  /// Color para señalar el estado (usado en un punto sutil)
   final Color statusColor;
 
   final TileCheckboxSide checkboxSide;
@@ -40,6 +42,7 @@ class ContentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Checkbox en el lado que toque
     final leftCb  = checkboxSide == TileCheckboxSide.left
         ? Checkbox(value: checked, onChanged: (_) => onToggleCheck?.call())
         : null;
@@ -47,65 +50,62 @@ class ContentTile extends StatelessWidget {
         ? Checkbox(value: checked, onChanged: (_) => onToggleCheck?.call())
         : null;
 
-    final tile = Card(
-      elevation: 0.5,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onLongPress: onLongPress,
-        child: SizedBox(
-          height: 72,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Franja de estado
-              Container(width: 3, color: statusColor),
-              // Checkbox izquierdo
-              if (leftCb != null)
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Center(child: leftCb)),
-              // Contenido principal
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Icon(typeIcon, size: 16),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            id,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ),
-                        if (hasLinks) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.link, size: 16, color: Colors.blue),
-                        ],
-                      ]),
-                      const SizedBox(height: 6),
-                      Text(
-                        text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Checkbox derecho
-              if (rightCb != null)
-                Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Center(child: rightCb)),
-            ],
+    // Leading compacto: [checkbox izq?] icono tipo
+    Widget? leading;
+    if (leftCb != null) {
+      leading = Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [leftCb, const SizedBox(width: 4), Icon(typeIcon, size: 18)],
+      );
+    } else {
+      leading = Icon(typeIcon, size: 18);
+    }
+
+    // Trailing: [checkbox der?] (en list no hay trailing)
+    Widget? trailing = rightCb;
+
+    // Título: • (punto color estado) + ID + 🔗 si tiene enlaces
+    final title = Row(
+      children: [
+        Icon(Icons.circle, size: 6, color: statusColor),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            id,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ),
+        if (hasLinks) const SizedBox(width: 8),
+        if (hasLinks) const Icon(Icons.link, size: 16, color: Colors.blue),
+      ],
+    );
+
+    // Subtítulo: texto en una línea
+    final subtitle = Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(fontSize: 14),
+    );
+
+    final tile = Card(
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        leading: leading,
+        title: title,
+        subtitle: subtitle,
+        trailing: trailing,
+        onLongPress: onLongPress,
+        // tap no hace nada (evitamos confusión)
       ),
     );
 
+    // Swipe con Dismissible (acciones, sin quitar el tile)
     return Dismissible(
       key: key ?? ValueKey('tile_$id'),
       confirmDismiss: (d) async {
@@ -114,7 +114,7 @@ class ContentTile extends StatelessWidget {
         } else if (d == DismissDirection.endToStart) {
           if (onSwipeEndToStart != null) await onSwipeEndToStart!.call();
         }
-        return false; // aplicamos acción pero no retiramos el tile
+        return false;
       },
       background: _swipeBg(false),
       secondaryBackground: _swipeBg(true),
