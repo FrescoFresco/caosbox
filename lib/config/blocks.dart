@@ -4,9 +4,6 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/screens/links_block.dart';
 
-// ⬇️ IMPORTA tu callback REAL (el mismo que usa B1/B2) desde donde lo tengas
-import 'package:caosbox/app.dart' show openAdvancedFilters; // ajusta la ruta si es otra
-
 /// Config por tipo (B1/B2)
 class ItemTypeCfg {
   final String prefix;
@@ -75,14 +72,11 @@ final blocks = <Block>[
     label: actionsCfg.label,
     type: ItemType.action,
   ),
-  // Enlaces: usa EXACTO el mismo modal de filtros que B1/B2 via callback
+  // Enlaces: ahora abre el MISMO modal de B1/B2 internamente (FiltersSheet)
   Block.custom(
     id: 'links',
     icon: Icons.link,
     label: 'Enlaces',
-    custom: (ctx, st) => LinksBlock(
-      state: st,
-      onOpenFilters: (c) => openAdvancedFilters(c), // ← tu función real ya existente
-    ),
+    custom: (ctx, st) => LinksBlock(state: st),
   ),
 ];
