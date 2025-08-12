@@ -16,36 +16,6 @@ import 'package:caosbox/ui/widgets/content_tile.dart';
 enum ContentBlockMode { list, select, link }
 enum CheckboxSide { none, left, right }
 
-/// Filtros locales (post-procesado) que se aplican tras la búsqueda base.
-/// Si es null, no se aplica ningún filtrado local.
-class LocalFilters {
-  final Set<ItemType> types; // vacío = ambos
-  final Tri completed;       // off/include/exclude
-  final Tri archived;        // off/include/exclude
-  final Tri linked;          // off/include/exclude
-
-  const LocalFilters({
-    this.types = const {},
-    this.completed = Tri.off,
-    this.archived = Tri.off,
-    this.linked = Tri.off,
-  });
-
-  LocalFilters copyWith({
-    Set<ItemType>? types,
-    Tri? completed,
-    Tri? archived,
-    Tri? linked,
-  }) => LocalFilters(
-        types: types ?? this.types,
-        completed: completed ?? this.completed,
-        archived: archived ?? this.archived,
-        linked: linked ?? this.linked,
-      );
-
-  static const empty = LocalFilters();
-}
-
 class ContentBlock extends StatefulWidget {
   final AppState state;
   final Set<ItemType>? types;
@@ -53,13 +23,11 @@ class ContentBlock extends StatefulWidget {
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
 
-  /// Callback externo para abrir tu modal de filtros (si lo usas en Ideas/Acciones).
+  /// Callback externo para abrir TU modal de filtros avanzado (el mismo que usas en B1/B2).
+  /// Si es null, no se muestra el botón “tune”.
   final VoidCallback? onOpenFilters;
 
-  /// Filtros locales opcionales (se aplican después del motor de búsqueda).
-  final LocalFilters? localFilters;
-
-  final bool showComposer;
+  final bool showComposer;            // añadir bloques (sólo listas B1/B2)
   final ContentBlockMode mode;
   final String? anchorId;
   final CheckboxSide checkboxSide;
@@ -74,7 +42,6 @@ class ContentBlock extends StatefulWidget {
     required this.quickQuery,
     required this.onQuickQuery,
     this.onOpenFilters,
-    this.localFilters,
     this.showComposer = false,
     this.mode = ContentBlockMode.list,
     this.anchorId,
@@ -126,41 +93,6 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
     return SearchSpec(clauses: [...base.clauses, quick]);
   }
 
-  List<Item> _applyLocalFilters(List<Item> items) {
-    final lf = widget.localFilters;
-    if (lf == null) return items;
-
-    Iterable<Item> cur = items;
-
-    // Tipos
-    if (lf.types.isNotEmpty) {
-      cur = cur.where((it) => lf.types.contains(it.type));
-    }
-
-    // Completed
-    if (lf.completed == Tri.include) {
-      cur = cur.where((it) => it.status == ItemStatus.completed);
-    } else if (lf.completed == Tri.exclude) {
-      cur = cur.where((it) => it.status != ItemStatus.completed);
-    }
-
-    // Archived
-    if (lf.archived == Tri.include) {
-      cur = cur.where((it) => it.status == ItemStatus.archived);
-    } else if (lf.archived == Tri.exclude) {
-      cur = cur.where((it) => it.status != ItemStatus.archived);
-    }
-
-    // Linked
-    if (lf.linked == Tri.include) {
-      cur = cur.where((it) => widget.state.links(it.id).isNotEmpty);
-    } else if (lf.linked == Tri.exclude) {
-      cur = cur.where((it) => widget.state.links(it.id).isEmpty);
-    }
-
-    return List<Item>.from(cur, growable: false);
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -169,8 +101,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
       builder: (_, __) {
         final srcAll    = _sourceByTypes();
         final effective = _mergeQuick(widget.spec, _q.text);
-        final baseItems = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
-        final items     = _applyLocalFilters(baseItems);
+        final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
         // IO datos (sólo en listas principales)
         final onExportData = () {
@@ -204,7 +135,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
           child: Column(children: [
             CaosSearchBar(
               controller: _q,
-              onOpenFilters: widget.onOpenFilters,            // botón filtros externo (igual que antes)
+              onOpenFilters: widget.onOpenFilters,           // ← mismo modal de B1/B2
               onExportData:  showDataIO  ? onExportData : null,
               onImportData:  showDataIO  ? onImportData : null,
             ),
