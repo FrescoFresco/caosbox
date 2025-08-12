@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/domain/search/search_models.dart';
-import 'package:caosbox/ui/widgets/items_block.dart';
+import 'package:caosbox/ui/widgets/content_block.dart';
 
 class LinksBlock extends StatefulWidget {
   final AppState state;
@@ -13,47 +13,43 @@ class LinksBlock extends StatefulWidget {
 
 class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
   String? _selected;
-
-  @override
-  bool get wantKeepAlive => true;
+  @override bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
-    // En enlaces no usamos filtros avanzados → noop
-    void _noop(){}
+    void _noop() {}
 
     final left = Expanded(
-      child: ItemsBlock(
+      child: ContentBlock(
         key: const ValueKey('links_left'),
         state: widget.state,
-        types: null,                         // todos los ítems
-        spec: const SearchSpec(),            // sin cláusulas
-        quickQuery: '',                      // búsqueda propia
-        onQuickQuery: (_) {},
-        onOpenFilters: _noop,
-        showComposer: false,
-        mode: ItemsBlockMode.select,
-        selectedId: _selected,
-        onSelect: (id)=> setState(()=> _selected = id),
-        checkboxSide: CheckboxSide.right,    // ✔ checkbox a la derecha (selección)
-      ),
-    );
-
-    final right = Expanded(
-      child: ItemsBlock(
-        key: ValueKey('links_right_${_selected ?? "none"}'),
-        state: widget.state,
-        types: null,                         // todos los ítems
+        types: null,
         spec: const SearchSpec(),
         quickQuery: '',
         onQuickQuery: (_) {},
         onOpenFilters: _noop,
         showComposer: false,
-        mode: ItemsBlockMode.link,
-        anchorId: _selected,                 // ancla seleccionada
-        checkboxSide: CheckboxSide.left,     // ✔ checkbox a la izquierda (conectar)
+        mode: ContentBlockMode.select,
+        selectedId: _selected,
+        onSelect: (id)=> setState(()=> _selected = id),
+        checkboxSide: CheckboxSide.right,
+      ),
+    );
+
+    final right = Expanded(
+      child: ContentBlock(
+        key: ValueKey('links_right_${_selected ?? "none"}'),
+        state: widget.state,
+        types: null,
+        spec: const SearchSpec(),
+        quickQuery: '',
+        onQuickQuery: (_) {},
+        onOpenFilters: _noop,
+        showComposer: false,
+        mode: ContentBlockMode.link,
+        anchorId: _selected,
+        checkboxSide: CheckboxSide.left,
       ),
     );
 
