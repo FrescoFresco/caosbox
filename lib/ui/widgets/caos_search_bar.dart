@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Buscador unificado (NO el de Flutter).
-/// - Lupa + campo + botones opcionales: filtros / exportar / importar.
+/// Lupa + campo + (opcionales) filtros / exportar / importar.
 class CaosSearchBar extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
-  final VoidCallback? onOpenFilters;   // null => oculta botón
-  final VoidCallback? onExportData;    // null => oculta botón
-  final VoidCallback? onImportData;    // null => oculta botón
+  final VoidCallback? onOpenFilters;
+  final VoidCallback? onExportData;
+  final VoidCallback? onImportData;
 
   const CaosSearchBar({
     super.key,
@@ -47,7 +47,7 @@ class _CaosSearchBarState extends State<CaosSearchBar> {
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search),
             suffixIcon: c.text.isNotEmpty
-                ? IconButton(tooltip: 'Limpiar', icon: const Icon(Icons.clear), onPressed: c.clear)
+                ? IconButton(icon: const Icon(Icons.clear), onPressed: c.clear)
                 : null,
             hintText: widget.hint,
             isDense: true,
@@ -57,15 +57,15 @@ class _CaosSearchBarState extends State<CaosSearchBar> {
       ),
       if (widget.onOpenFilters != null) ...[
         const SizedBox(width: 6),
-        IconButton(tooltip: 'Filtros', onPressed: widget.onOpenFilters, icon: const Icon(Icons.tune)),
+        IconButton(onPressed: widget.onOpenFilters, icon: const Icon(Icons.tune)),
       ],
       if (widget.onExportData != null) ...[
         const SizedBox(width: 6),
-        IconButton(tooltip: 'Exportar datos', onPressed: widget.onExportData, icon: const Icon(Icons.upload)),
+        IconButton(onPressed: widget.onExportData, icon: const Icon(Icons.upload)),
       ],
       if (widget.onImportData != null) ...[
         const SizedBox(width: 6),
-        IconButton(tooltip: 'Importar datos', onPressed: widget.onImportData, icon: const Icon(Icons.download)),
+        IconButton(onPressed: widget.onImportData, icon: const Icon(Icons.download)),
       ],
     ]);
   }
