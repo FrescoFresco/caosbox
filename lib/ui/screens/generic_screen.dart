@@ -6,8 +6,9 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/ui/widgets/content_block.dart';
 
 class GenericScreen extends StatefulWidget{
-  final Block b; final AppState st;
-  const GenericScreen({super.key, required this.b, required this.st});
+  final Block block;  // ← nombre alineado con app.dart
+  final AppState st;
+  const GenericScreen({super.key, required this.block, required this.st});
   @override State<GenericScreen> createState()=>_GenericScreenState();
 }
 
@@ -19,7 +20,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
   @override
   Widget build(BuildContext ctx){
     super.build(ctx);
-    final t = widget.b.type!;
+    final t = widget.block.type!;
     return Padding(
       padding: const EdgeInsets.all(0),
       child: ContentBlock(
