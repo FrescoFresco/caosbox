@@ -5,7 +5,7 @@ import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/theme/style.dart';
 
-import 'package:caosbox/ui/widgets/items_block.dart';
+import 'package:caosbox/ui/widgets/content_block.dart';
 import 'package:caosbox/domain/search/search_models.dart';
 
 String lbl(ItemType t) => t == ItemType.idea ? 'Idea' : 'Acción';
@@ -72,16 +72,16 @@ class _InfoModalState extends State<InfoModal>{
                     onChanged: (t) { _deb?.cancel(); _deb = Timer(const Duration(milliseconds: 250), ()=>widget.st.updateText(cur.id, t)); },
                   ),
                 ),
-                // Relacionado: mismo buscador único (sin filtros ni IO), link con checkbox a la derecha
-                ItemsBlock(
+                // Relacionado (mismo bloque, 1 panel, check a la derecha)
+                ContentBlock(
                   state: widget.st,
                   types: null,
                   spec: const SearchSpec(),
                   quickQuery: '',
                   onQuickQuery: (_){},
-                  onOpenFilters: (){},      // oculto (no se muestra)
+                  onOpenFilters: (){},      // oculto
                   showComposer: false,
-                  mode: ItemsBlockMode.link,
+                  mode: ContentBlockMode.link,
                   anchorId: cur.id,
                   checkboxSide: CheckboxSide.right,
                 ),
