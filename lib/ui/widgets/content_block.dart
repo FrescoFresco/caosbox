@@ -22,8 +22,12 @@ class ContentBlock extends StatefulWidget {
   final SearchSpec spec;
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-  final VoidCallback onOpenFilters; // ya no se usa (quedará ignorado)
-  final bool showComposer;
+
+  /// Callback externo para abrir TU modal de filtros avanzado.
+  /// Si es null, el botón de filtros no se muestra.
+  final VoidCallback? onOpenFilters;
+
+  final bool showComposer;            // añadir bloques (sólo listas B1/B2)
   final ContentBlockMode mode;
   final String? anchorId;
   final CheckboxSide checkboxSide;
@@ -37,7 +41,7 @@ class ContentBlock extends StatefulWidget {
     required this.spec,
     required this.quickQuery,
     required this.onQuickQuery,
-    required this.onOpenFilters,
+    this.onOpenFilters,
     this.showComposer = false,
     this.mode = ContentBlockMode.list,
     this.anchorId,
@@ -53,12 +57,6 @@ class ContentBlock extends StatefulWidget {
 class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClientMixin {
   late final TextEditingController _q;
   late final TextEditingController _composer;
-
-  // Filtros locales (aplicados tras la búsqueda base)
-  final Set<ItemType> _ftypes = {};     // vacío = ambos
-  Tri _fCompleted = Tri.off;            // off/include/exclude
-  Tri _fArchived  = Tri.off;
-  Tri _fLinked    = Tri.off;
 
   @override
   void initState() {
@@ -95,116 +93,6 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
     return SearchSpec(clauses: [...base.clauses, quick]);
   }
 
-  List<Item> _applyLocalFilters(List<Item> items) {
-    Iterable<Item> cur = items;
-
-    // Tipos
-    if (_ftypes.isNotEmpty) {
-      cur = cur.where((it) => _ftypes.contains(it.type));
-    }
-
-    // Completed
-    if (_fCompleted == Tri.include) {
-      cur = cur.where((it) => it.status == ItemStatus.completed);
-    } else if (_fCompleted == Tri.exclude) {
-      cur = cur.where((it) => it.status != ItemStatus.completed);
-    }
-
-    // Archived
-    if (_fArchived == Tri.include) {
-      cur = cur.where((it) => it.status == ItemStatus.archived);
-    } else if (_fArchived == Tri.exclude) {
-      cur = cur.where((it) => it.status != ItemStatus.archived);
-    }
-
-    // Linked
-    if (_fLinked == Tri.include) {
-      cur = cur.where((it) => widget.state.links(it.id).isNotEmpty);
-    } else if (_fLinked == Tri.exclude) {
-      cur = cur.where((it) => widget.state.links(it.id).isEmpty);
-    }
-
-    return List<Item>.from(cur, growable: false);
-  }
-
-  void _openFilters() {
-    // Hoja simple con chips de tipos y tri-filtros (✓, 📁, 🔗)
-    setState((){}); // garantiza rebuild tras cierre si cambian
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: false,
-      builder: (ctx) {
-        Tri cycle(Tri v) => v == Tri.off ? Tri.include : (v == Tri.include ? Tri.exclude : Tri.off);
-
-        Widget triChip(String label, Tri value, VoidCallback onTap, {Color? color}) {
-          final bool on = value != Tri.off;
-          final Color bg = switch (value) {
-            Tri.include => (color ?? Colors.green).withOpacity(0.20),
-            Tri.exclude => Colors.red.withOpacity(0.20),
-            _ => Colors.transparent,
-          };
-          final String txt = switch (value) {
-            Tri.include => label,
-            Tri.exclude => '⊘$label',
-            _ => label,
-          };
-          return ChoiceChip(
-            selected: on,
-            onSelected: (_) => onTap(),
-            label: Text(txt),
-            selectedColor: bg,
-          );
-        }
-
-        Widget typeChip(ItemType t) {
-          final on = _ftypes.contains(t);
-          return FilterChip(
-            selected: on,
-            onSelected: (_) => setState(() {
-              if (on) { _ftypes.remove(t); } else { _ftypes.add(t); }
-            }),
-            label: Text(t == ItemType.idea ? 'Ideas' : 'Acciones'),
-          );
-        }
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Wrap(runSpacing: 12, spacing: 8, children: [
-              const Text('Tipos', style: TextStyle(fontWeight: FontWeight.w600)),
-              Row(children: [
-                typeChip(ItemType.idea),
-                const SizedBox(width: 8),
-                typeChip(ItemType.action),
-              ]),
-              const Divider(),
-              const Text('Estado', style: TextStyle(fontWeight: FontWeight.w600)),
-              Wrap(spacing: 8, runSpacing: 8, children: [
-                triChip('✓', _fCompleted, () => setState(()=> _fCompleted = cycle(_fCompleted)), color: Colors.green),
-                triChip('📁', _fArchived,  () => setState(()=> _fArchived  = cycle(_fArchived)),  color: Colors.grey),
-                triChip('🔗', _fLinked,    () => setState(()=> _fLinked    = cycle(_fLinked)),    color: Colors.blue),
-              ]),
-              const SizedBox(height: 12),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                TextButton(onPressed: (){
-                  setState(() {
-                    _ftypes.clear(); _fCompleted = Tri.off; _fArchived = Tri.off; _fLinked = Tri.off;
-                  });
-                  Navigator.pop(ctx);
-                }, child: const Text('Limpiar')),
-                const SizedBox(width: 8),
-                FilledButton(onPressed: (){
-                  setState((){});
-                  Navigator.pop(ctx);
-                }, child: const Text('Aplicar')),
-              ]),
-            ]),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -213,9 +101,9 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
       builder: (_, __) {
         final srcAll    = _sourceByTypes();
         final effective = _mergeQuick(widget.spec, _q.text);
-        final baseItems = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
-        final items     = _applyLocalFilters(baseItems);
+        final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
+        // IO datos (sólo en listas principales)
         final onExportData = () {
           final json = exportDataJson(widget.state);
           _showLong(context, 'Datos (JSON)', json);
@@ -247,9 +135,9 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
           child: Column(children: [
             CaosSearchBar(
               controller: _q,
-              onOpenFilters: _openFilters,              // ← siempre el mismo panel interno
-              onExportData:  showDataIO ? onExportData : null,
-              onImportData:  showDataIO ? onImportData : null,
+              onOpenFilters: widget.onOpenFilters,           // ← el de ANTES
+              onExportData:  showDataIO  ? onExportData : null,
+              onImportData:  showDataIO  ? onImportData : null,
             ),
             if (showComposer) ...[
               const SizedBox(height: 12),
@@ -257,7 +145,10 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
                 icon: _composerIcon(),
                 hint: _composerHint(),
                 controller: _composer,
-                onAdd: () { final t = _singleTypeOrNull(); if (t!=null){ widget.state.add(t, _composer.text); _composer.clear(); } },
+                onAdd: () {
+                  final t = _singleTypeOrNull();
+                  if (t != null) { widget.state.add(t, _composer.text); _composer.clear(); }
+                },
                 onCancel: () { _composer.clear(); },
               ),
             ],
