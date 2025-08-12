@@ -1,36 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/enums.dart';
-import 'package:caosbox/core/models/item.dart';
-import 'package:caosbox/core/utils/tri.dart';
-
 import 'package:caosbox/domain/search/search_models.dart';
-import 'package:caosbox/domain/search/search_engine.dart';
-import 'package:caosbox/search/search_io.dart';
+import 'package:caosbox/ui/widgets/content_block.dart';
 
-// <<< usa el buscador propio con prefijo para no chocar con Flutter SearchBar >>>
-import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
-
-import 'package:caosbox/ui/widgets/composer_card.dart';
-import 'package:caosbox/ui/widgets/item_tile.dart';
-import 'package:caosbox/ui/screens/info_modal.dart';
-
-enum ItemsBlockMode { list, select, link }
-enum CheckboxSide { none, left, right }
-
-class ItemsBlock extends StatefulWidget {
+/// Wrapper legacy para proyectos que aún referencian ItemsBlock.
+/// Internamente delega en ContentBlock (modo list).
+class ItemsBlock extends StatelessWidget {
   final AppState state;
   final Set<ItemType>? types;
   final SearchSpec spec;
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-  final VoidCallback onOpenFilters;
+  final Future<void> Function(BuildContext, ItemType) onOpenFilters;
   final bool showComposer;
-  final ItemsBlockMode mode;
-  final String? anchorId;
-  final CheckboxSide checkboxSide;
-  final String? selectedId;
-  final ValueChanged<String?>? onSelect;
 
   const ItemsBlock({
     super.key,
@@ -40,205 +23,27 @@ class ItemsBlock extends StatefulWidget {
     required this.quickQuery,
     required this.onQuickQuery,
     required this.onOpenFilters,
-    this.showComposer = false,
-    this.mode = ItemsBlockMode.list,
-    this.anchorId,
-    this.checkboxSide = CheckboxSide.none,
-    this.selectedId,
-    this.onSelect,
+    this.showComposer = true,
   });
 
   @override
-  State<ItemsBlock> createState() => _ItemsBlockState();
-}
-
-class _ItemsBlockState extends State<ItemsBlock> with AutomaticKeepAliveClientMixin {
-  late final TextEditingController _q;
-  late final TextEditingController _composer;
-  final _expanded = <String>{};
-
-  @override
-  void initState() {
-    super.initState();
-    _q = TextEditingController(text: widget.quickQuery)..addListener(() => widget.onQuickQuery(_q.text));
-    _composer = TextEditingController();
-  }
-
-  @override
-  void didUpdateWidget(covariant ItemsBlock oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.quickQuery != widget.quickQuery && _q.text != widget.quickQuery) {
-      _q.text = widget.quickQuery;
-      _q.selection = TextSelection.collapsed(offset: _q.text.length);
-    }
-  }
-
-  @override
-  void dispose() { _q.dispose(); _composer.dispose(); super.dispose(); }
-  @override bool get wantKeepAlive => true;
-
-  List<Item> _sourceByTypes() {
-    if (widget.types == null) return widget.state.all;
-    final out = <Item>[];
-    for (final t in widget.types!) { out.addAll(widget.state.items(t)); }
-    return out;
-  }
-
-  SearchSpec _mergeQuick(SearchSpec base, String q) {
-    final parts = q.trim().isEmpty ? <String>[] : q.trim().split(RegExp(r'\s+'));
-    final tokens = parts.map((p) => p.startsWith('-') && p.length > 1 ? Token(p.substring(1), Tri.exclude) : Token(p, Tri.include)).toList();
-    if (tokens.isEmpty) return base;
-    final quick = TextClause(fields: {'id':Tri.include,'content':Tri.include,'note':Tri.include}, tokens: tokens);
-    return SearchSpec(clauses: [...base.clauses, quick]);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return AnimatedBuilder(
-      animation: widget.state,
-      builder: (_, __) {
-        final srcAll = _sourceByTypes();
-        final effective = _mergeQuick(widget.spec, _q.text);
-        final filtered = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
-
-        final onExportData = () {
-          final json = exportDataJson(widget.state);
-          _showLong(context, 'Datos (JSON)', json);
-        };
-        final onImportData = () async {
-          final ctrl = TextEditingController();
-          final ok = await showDialog<bool>(
-            context: context,
-            builder: (dctx) => AlertDialog(
-              title: const Text('Importar datos (reemplaza)'),
-              content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-              actions: [
-                TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
-              ],
-            ),
-          );
-          if (ok == true) {
-            try {
-              importDataJsonReplace(widget.state, ctrl.text);
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos importados')));
-            } catch (e) {
-              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-            }
-          }
-        };
-
-        final showComposer = widget.showComposer && widget.mode == ItemsBlockMode.list;
-        final showFilters = widget.mode == ItemsBlockMode.list; // solo listas principales
-        final showDataIO  = widget.mode == ItemsBlockMode.list; // IO solo listas principales
-
-        return Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [
-            cx.SearchBar(
-              controller: _q,
-              onOpenFilters: showFilters ? widget.onOpenFilters : null,
-              onExportData:  showDataIO  ? onExportData : null,
-              onImportData:  showDataIO  ? onImportData : null,
-            ),
-            if (showComposer) ...[
-              const SizedBox(height: 12),
-              ComposerCard(
-                icon: _composerIcon(),
-                hint: _composerHint(),
-                controller: _composer,
-                onAdd: () { final t = _singleTypeOrNull(); if (t!=null){ widget.state.add(t, _composer.text); _composer.clear(); } },
-                onCancel: () { _composer.clear(); },
-              ),
-            ],
-            const SizedBox(height: 8),
-            Expanded(
-              child: widget.mode == ItemsBlockMode.list
-                  ? _buildListMode(filtered)
-                  : _buildSelectOrLinkMode(filtered),
-            ),
-          ]),
-        );
+    // Si se pasa un solo tipo, lo usamos; si no, ContentBlock maneja null=todos
+    Set<ItemType>? t = types;
+    return ContentBlock(
+      state: state,
+      types: t,
+      spec: spec,
+      quickQuery: quickQuery,
+      onQuickQuery: onQuickQuery,
+      onOpenFilters: () async {
+        // si hay un único tipo, pásalo a tu modal
+        final type = (t != null && t.length == 1) ? t.first : ItemType.idea;
+        await onOpenFilters(context, type);
       },
+      showComposer: showComposer,
+      mode: ContentBlockMode.list,
+      checkboxSide: CheckboxSide.none,
     );
-  }
-
-  Widget _buildListMode(List<Item> items) {
-    return ListView.builder(
-      key: const PageStorageKey('items_list_mode'),
-      itemCount: items.length,
-      itemBuilder: (_, i) {
-        final it = items[i]; final open = _expanded.contains(it.id);
-        return KeyedSubtree(
-          key: ValueKey(it.id),
-          child: ItemTile(
-            key: ValueKey('tile_${it.id}'),
-            item: it, st: widget.state, expanded: open,
-            onTap: () { open ? _expanded.remove(it.id) : _expanded.add(it.id); setState((){}); },
-            onInfo: () => showInfoModal(context, it, widget.state),
-            swipeable: true, checkbox: false,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSelectOrLinkMode(List<Item> items) {
-    final anchor = widget.mode == ItemsBlockMode.link ? widget.anchorId : null;
-    return ListView.builder(
-      key: ValueKey('items_sel_link_${anchor ?? "none"}'),
-      itemCount: items.length,
-      itemBuilder: (_, i) {
-        final it = items[i];
-        if (anchor != null && it.id == anchor) return const SizedBox.shrink();
-
-        bool checked = false; VoidCallback? onTap; Widget? leading, trailing;
-
-        if (widget.mode == ItemsBlockMode.select) {
-          checked = (widget.selectedId == it.id);
-          onTap = () => widget.onSelect?.call(checked ? null : it.id);
-          final cb = Checkbox(value: checked, onChanged: (_)=> onTap?.call());
-          leading  = widget.checkboxSide == CheckboxSide.left  ? cb : null;
-          trailing = widget.checkboxSide == CheckboxSide.right ? cb : null;
-        } else {
-          checked = anchor != null && widget.state.links(anchor).contains(it.id);
-          onTap = () => widget.state.toggleLink(anchor!, it.id);
-          final cb = Checkbox(value: checked, onChanged: (_)=> onTap?.call());
-          leading  = widget.checkboxSide == CheckboxSide.left  ? cb : null;
-          trailing = widget.checkboxSide == CheckboxSide.right ? cb : null;
-        }
-
-        return ListTile(
-          key: ValueKey('li_${anchor ?? "sel"}_${it.id}'),
-          leading: leading, trailing: trailing,
-          title: Text('${it.id} — ${it.text}', maxLines: 1, overflow: TextOverflow.ellipsis),
-          onTap: onTap,
-        );
-      },
-    );
-  }
-
-  String _composerHint() {
-    final t = _singleTypeOrNull();
-    if (t == ItemType.idea) return 'Escribe tu idea...';
-    if (t == ItemType.action) return 'Describe la acción...';
-    return 'Añadir...';
-  }
-  IconData _composerIcon() {
-    final t = _singleTypeOrNull();
-    if (t == ItemType.idea) return Icons.lightbulb;
-    if (t == ItemType.action) return Icons.assignment;
-    return Icons.add;
-  }
-  ItemType? _singleTypeOrNull() {
-    final ts = widget.types; if (ts == null || ts.length != 1) return null; return ts.first;
-  }
-
-  void _showLong(BuildContext context, String title, String text) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: Text(title), content: SizedBox(width: 600, child: SelectableText(text)),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar'))],
-    ));
   }
 }
