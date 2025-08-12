@@ -4,13 +4,11 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/ui/widgets/content_block.dart';
 
 /// Enlaces: usa el MISMO modal de filtros avanzados que B1/B2.
-/// Le inyectamos el callback [onOpenFilters] y lo reutilizamos en ambas columnas.
+/// Se inyecta desde blocks.dart como callback y se reutiliza en ambas columnas.
 class LinksBlock extends StatefulWidget {
   final AppState state;
 
-  /// Callback que abre tu modal de “Búsqueda avanzada” (el mismo de Ideas/Acciones).
-  /// Ejemplo de uso al construir:
-  ///   onOpenFilters: (ctx) => openAdvancedFilters(ctx),
+  /// Callback que abre tu modal de “Búsqueda avanzada” (el de B1/B2).
   final Future<void> Function(BuildContext) onOpenFilters;
 
   const LinksBlock({
@@ -25,8 +23,6 @@ class LinksBlock extends StatefulWidget {
 
 class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
   String? _selected;
-
-  // Cada columna mantiene su query rápida y spec (independientes).
   String _leftQuery  = '';
   String _rightQuery = '';
   SearchSpec _leftSpec  = const SearchSpec();
@@ -52,7 +48,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         mode: ContentBlockMode.select,
         selectedId: _selected,
         onSelect: (id) => setState(() => _selected = id),
-        checkboxSide: CheckboxSide.right, // checkbox a la derecha en la columna izq
+        checkboxSide: CheckboxSide.right, // checkbox derecha en la columna izq
       ),
     );
 
@@ -64,11 +60,11 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: _rightSpec,
         quickQuery: _rightQuery,
         onQuickQuery: (q) => setState(() => _rightQuery = q),
-        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal que B1/B2
+        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal
         showComposer: false,
         mode: ContentBlockMode.link,
         anchorId: _selected,
-        checkboxSide: CheckboxSide.left, // checkbox a la izquierda en la columna dcha
+        checkboxSide: CheckboxSide.left, // checkbox izquierda en la columna dcha
       ),
     );
 
