@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 /// Buscador unificado de la app (NO el de Flutter).
-/// - Soporta: limpiar, abrir filtros, exportar/importar datos.
-/// - Úsalo con un TextEditingController externo.
+/// - Limpieza con ✖️, botón de filtros (opcional),
+///   exportar/importar (opcional).
+/// - Usa un TextEditingController externo.
 class SearchBar extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
-  final VoidCallback? onOpenFilters;   // si es null, no muestra botón
-  final VoidCallback? onExportData;    // si es null, no muestra botón
-  final VoidCallback? onImportData;    // si es null, no muestra botón
+  final VoidCallback? onOpenFilters;   // null => no muestra botón
+  final VoidCallback? onExportData;    // null => no muestra botón
+  final VoidCallback? onImportData;    // null => no muestra botón
 
   const SearchBar({
     super.key,
@@ -48,7 +49,11 @@ class _SearchBarState extends State<SearchBar> {
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.search),
             suffixIcon: c.text.isNotEmpty
-                ? IconButton(tooltip: 'Limpiar', icon: const Icon(Icons.clear), onPressed: c.clear)
+                ? IconButton(
+                    tooltip: 'Limpiar',
+                    icon: const Icon(Icons.clear),
+                    onPressed: c.clear,
+                  )
                 : null,
             hintText: widget.hint,
             isDense: true,
@@ -58,15 +63,27 @@ class _SearchBarState extends State<SearchBar> {
       ),
       if (widget.onOpenFilters != null) ...[
         const SizedBox(width: 6),
-        IconButton(tooltip: 'Filtros', onPressed: widget.onOpenFilters, icon: const Icon(Icons.tune)),
+        IconButton(
+          tooltip: 'Filtros',
+          onPressed: widget.onOpenFilters,
+          icon: const Icon(Icons.tune),
+        ),
       ],
       if (widget.onExportData != null) ...[
         const SizedBox(width: 6),
-        IconButton(tooltip: 'Exportar datos', onPressed: widget.onExportData, icon: const Icon(Icons.upload)),
+        IconButton(
+          tooltip: 'Exportar datos',
+          onPressed: widget.onExportData,
+          icon: const Icon(Icons.upload),
+        ),
       ],
       if (widget.onImportData != null) ...[
         const SizedBox(width: 6),
-        IconButton(tooltip: 'Importar datos', onPressed: widget.onImportData, icon: const Icon(Icons.download)),
+        IconButton(
+          tooltip: 'Importar datos',
+          onPressed: widget.onImportData,
+          icon: const Icon(Icons.download),
+        ),
       ],
     ]);
   }
