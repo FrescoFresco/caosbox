@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Buscador unificado (NO el de Flutter).
-/// Lupa + campo + (opcionales) filtros / exportar / importar.
+/// Buscador unificado (el de antes):
+/// - Lupa + campo
+/// - Botón de filtros (si onOpenFilters != null)
+/// - Exportar/Importar datos (si se pasan)
 class CaosSearchBar extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
