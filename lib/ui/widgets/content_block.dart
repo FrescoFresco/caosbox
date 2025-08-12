@@ -22,7 +22,7 @@ class ContentBlock extends StatefulWidget {
   final SearchSpec spec;
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-  final VoidCallback onOpenFilters;
+  final VoidCallback onOpenFilters; // se ocultará según modo
   final bool showComposer;
   final ContentBlockMode mode;
   final String? anchorId;
@@ -123,8 +123,10 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         };
 
         final showComposer = widget.showComposer && widget.mode == ContentBlockMode.list;
-        final showFilters  = true;                        // SIEMPRE botón filtros
-        final showDataIO   = widget.mode == ContentBlockMode.list; // IO solo B1/B2
+        // 🔧 AHORA: el botón de filtros SOLO en modo list (Ideas/Acciones)
+        final showFilters  = widget.mode == ContentBlockMode.list;
+        // IO solo para Ideas/Acciones
+        final showDataIO   = widget.mode == ContentBlockMode.list;
 
         return Padding(
           padding: const EdgeInsets.all(12),
