@@ -8,11 +8,12 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 
-// buscador unificado propio (no el de Flutter)
+// buscador unificado propio
 import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
 
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
+import 'package:caosbox/ui/widgets/simple_block_tile.dart';
 
 enum ContentBlockMode { list, select, link }
 enum CheckboxSide { none, left, right }
@@ -155,69 +156,28 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
   }
 
   Widget _buildList(List<Item> items) {
+    final cbSide = switch (widget.checkboxSide) {
+      CheckboxSide.left  => SimpleCheckboxSide.left,
+      CheckboxSide.right => SimpleCheckboxSide.right,
+      _ => SimpleCheckboxSide.none,
+    };
+
     switch (widget.mode) {
       case ContentBlockMode.list:
         return ListView.builder(
           itemCount: items.length,
           itemBuilder: (_, i) {
             final it = items[i];
-            final statusIcon = switch (it.status) {
-              ItemStatus.completed => const Icon(Icons.check, size: 16, color: Colors.green),
-              ItemStatus.archived  => const Icon(Icons.archive, size: 16, color: Colors.grey),
-              _ => const SizedBox.shrink(),
-            };
             final hasLinks = widget.state.links(it.id).isNotEmpty;
 
-            Widget tile = ExpansionTile(
-              key: PageStorageKey('exp_${it.id}'),
-              leading: statusIcon,
-              title: Row(children: [
-                if (hasLinks) const Icon(Icons.link, size: 16, color: Colors.blue),
-                if (hasLinks) const SizedBox(width: 6),
-                Text(it.id, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Detalles',
-                  icon: const Icon(Icons.info_outline, size: 18),
-                  onPressed: () => showInfoModal(context, it, widget.state),
-                ),
-              ]),
-              subtitle: Text(
-                it.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
-              ),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(it.text, style: const TextStyle(fontSize: 14)),
-                  ),
-                ),
-              ],
+            return SimpleBlockTile(
+              key: ValueKey('list_${it.id}'),
+              id: it.id,
+              text: it.text,
+              hasLinks: hasLinks,
+              checkboxSide: SimpleCheckboxSide.none,
+              onInfo: () => showInfoModal(context, it, widget.state),
             );
-
-            tile = Dismissible(
-              key: Key('sw_${it.id}_${it.status.name}'),
-              confirmDismiss: (d) async {
-                final s = it.status;
-                if (d == DismissDirection.startToEnd) {
-                  final next = s == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed;
-                  widget.state.setStatus(it.id, next);
-                } else {
-                  final next = s == ItemStatus.archived ? ItemStatus.normal : ItemStatus.archived;
-                  widget.state.setStatus(it.id, next);
-                }
-                return false;
-              },
-              background: _swipeBg(false),
-              secondaryBackground: _swipeBg(true),
-              child: tile,
-            );
-
-            return Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: tile);
           },
         );
 
@@ -231,30 +191,26 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
             final it = items[i];
             if (anchor != null && it.id == anchor) return const SizedBox.shrink();
 
-            bool checked = false;
-            VoidCallback? onTap;
-            Widget? leading, trailing;
+            final hasLinks = widget.state.links(it.id).isNotEmpty;
+            bool checked; VoidCallback? onToggle;
 
             if (widget.mode == ContentBlockMode.select) {
               checked = (widget.selectedId == it.id);
-              onTap = () => widget.onSelect?.call(checked ? null : it.id);
-              final cb = Checkbox(value: checked, onChanged: (_)=> onTap?.call());
-              leading  = widget.checkboxSide == CheckboxSide.left  ? cb : null;
-              trailing = widget.checkboxSide == CheckboxSide.right ? cb : null;
+              onToggle = () => widget.onSelect?.call(checked ? null : it.id);
             } else {
               checked = anchor != null && widget.state.links(anchor).contains(it.id);
-              onTap = () => widget.state.toggleLink(anchor!, it.id);
-              final cb = Checkbox(value: checked, onChanged: (_)=> onTap?.call());
-              leading  = widget.checkboxSide == CheckboxSide.left  ? cb : null;
-              trailing = widget.checkboxSide == CheckboxSide.right ? cb : null;
+              onToggle = () => widget.state.toggleLink(anchor!, it.id);
             }
 
-            return ListTile(
-              key: ValueKey('li_${anchor ?? "sel"}_${it.id}'),
-              leading: leading,
-              trailing: trailing,
-              title: Text('${it.id} — ${it.text}', maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: onTap,
+            return SimpleBlockTile(
+              key: ValueKey('sel_link_${anchor ?? "sel"}_${it.id}'),
+              id: it.id,
+              text: it.text,
+              hasLinks: hasLinks,
+              checkboxSide: cbSide,
+              checked: checked,
+              onToggleCheck: onToggle,
+              onInfo: () => showInfoModal(context, it, widget.state),
             );
           },
         );
@@ -276,17 +232,6 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
   ItemType? _singleTypeOrNull() {
     final ts = widget.types; if (ts == null || ts.length != 1) return null; return ts.first;
   }
-
-  Widget _swipeBg(bool secondary) => Container(
-    color: (secondary ? Colors.grey : Colors.green).withOpacity(0.15),
-    child: Align(
-      alignment: secondary ? Alignment.centerRight : Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Icon(secondary ? Icons.archive : Icons.check, color: secondary ? Colors.grey : Colors.green),
-      ),
-    ),
-  );
 
   void _showLong(BuildContext context, String title, String text) {
     showDialog(context: context, builder: (ctx) => AlertDialog(
