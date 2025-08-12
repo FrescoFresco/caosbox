@@ -8,7 +8,7 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 
-import 'package:caosbox/ui/widgets/caos_search_bar.dart';
+import 'package:caosbox/ui/widgets/unified_search.dart';
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
 import 'package:caosbox/ui/widgets/content_tile.dart';
@@ -19,13 +19,18 @@ enum CheckboxSide { none, left, right }
 class ContentBlock extends StatefulWidget {
   final AppState state;
   final Set<ItemType>? types;
+
+  /// SearchSpec vigente (viene del padre y/o se mantiene localmente).
   final SearchSpec spec;
+
+  /// Texto de búsqueda rápida vigente.
   final String quickQuery;
+
+  /// Notifica cambios en el texto rápido hacia el padre.
   final ValueChanged<String> onQuickQuery;
 
-  /// Callback externo para abrir TU modal de filtros avanzado (el mismo que usas en B1/B2).
-  /// Si es null, no se muestra el botón “tune”.
-  final VoidCallback? onOpenFilters;
+  /// (Nuevo) Notifica cambios en el SearchSpec (cuando se aplica la hoja avanzada).
+  final ValueChanged<SearchSpec>? onSpecChanged;
 
   final bool showComposer;            // añadir bloques (sólo listas B1/B2)
   final ContentBlockMode mode;
@@ -41,7 +46,7 @@ class ContentBlock extends StatefulWidget {
     required this.spec,
     required this.quickQuery,
     required this.onQuickQuery,
-    this.onOpenFilters,
+    this.onSpecChanged,
     this.showComposer = false,
     this.mode = ContentBlockMode.list,
     this.anchorId,
@@ -58,11 +63,15 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
   late final TextEditingController _q;
   late final TextEditingController _composer;
 
+  // Mantengo una copia local del spec para poder usar ContentBlock sin onSpecChanged (p.ej. Relacionado en InfoModal).
+  late SearchSpec _spec;
+
   @override
   void initState() {
     super.initState();
     _q = TextEditingController(text: widget.quickQuery)..addListener(() => widget.onQuickQuery(_q.text));
     _composer = TextEditingController();
+    _spec = widget.spec;
   }
 
   @override
@@ -71,6 +80,9 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
     if (oldWidget.quickQuery != widget.quickQuery && _q.text != widget.quickQuery) {
       _q.text = widget.quickQuery;
       _q.selection = TextSelection.collapsed(offset: _q.text.length);
+    }
+    if (oldWidget.spec != widget.spec) {
+      _spec = widget.spec;
     }
   }
 
@@ -100,10 +112,9 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
       animation: widget.state,
       builder: (_, __) {
         final srcAll    = _sourceByTypes();
-        final effective = _mergeQuick(widget.spec, _q.text);
+        final effective = _mergeQuick(_spec, _q.text);
         final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
-        // IO datos (sólo en listas principales)
         final onExportData = () {
           final json = exportDataJson(widget.state);
           _showLong(context, 'Datos (JSON)', json);
@@ -133,12 +144,19 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Column(children: [
-            CaosSearchBar(
+            // ← BUSCADOR UNIFICADO (campo + botón que abre FiltersSheet)
+            UnifiedSearch(
+              state: widget.state,
               controller: _q,
-              onOpenFilters: widget.onOpenFilters,           // ← mismo modal de B1/B2
-              onExportData:  showDataIO  ? onExportData : null,
-              onImportData:  showDataIO  ? onImportData : null,
+              spec: _spec,
+              onSpecChanged: (s){
+                setState(()=> _spec = s);
+                widget.onSpecChanged?.call(s);
+              },
+              onExportData: showDataIO ? onExportData : null,
+              onImportData: showDataIO ? onImportData : null,
             ),
+
             if (showComposer) ...[
               const SizedBox(height: 12),
               ComposerCard(
