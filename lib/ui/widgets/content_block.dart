@@ -8,9 +8,7 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 
-// buscador unificado propio
-import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
-
+import 'package:caosbox/ui/widgets/caos_search_bar.dart';  // ← nuevo buscador unificado
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
 import 'package:caosbox/ui/widgets/content_tile.dart';
@@ -24,7 +22,7 @@ class ContentBlock extends StatefulWidget {
   final SearchSpec spec;
   final String quickQuery;
   final ValueChanged<String> onQuickQuery;
-  final VoidCallback onOpenFilters; // ← se usará en TODAS las vistas
+  final VoidCallback onOpenFilters;
   final bool showComposer;
   final ContentBlockMode mode;
   final String? anchorId;
@@ -101,11 +99,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         final effective = _mergeQuick(widget.spec, _q.text);
         final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
-        // IO de datos (solo en listas principales)
-        final onExportData = () {
-          final json = exportDataJson(widget.state);
-          _showLong(context, 'Datos (JSON)', json);
-        };
+        final onExportData = () { final json = exportDataJson(widget.state); _showLong(context, 'Datos (JSON)', json); };
         final onImportData = () async {
           final ctrl = TextEditingController();
           final ok = await showDialog<bool>(
@@ -113,10 +107,8 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
             builder: (dctx) => AlertDialog(
               title: const Text('Importar datos (reemplaza)'),
               content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-              actions: [
-                TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
-              ],
+              actions: [ TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
+                         FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')), ],
             ),
           );
           if (ok == true) {
@@ -126,17 +118,15 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         };
 
         final showComposer = widget.showComposer && widget.mode == ContentBlockMode.list;
-        // 🔁 Buscador SIEMPRE igual: muestra botón de filtros en todos los modos
-        final showFilters = true;
-        // IO sólo para Ideas/Acciones
-        final showDataIO  = widget.mode == ContentBlockMode.list;
+        final showFilters  = true;                  // SIEMPRE el botón de filtros
+        final showDataIO   = widget.mode == ContentBlockMode.list; // IO solo B1/B2
 
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Column(children: [
-            cx.SearchBar(
+            CaosSearchBar(
               controller: _q,
-              onOpenFilters: showFilters ? widget.onOpenFilters : null, // ← ahora nunca es null
+              onOpenFilters: showFilters ? widget.onOpenFilters : null,
               onExportData:  showDataIO  ? onExportData : null,
               onImportData:  showDataIO  ? onImportData : null,
             ),
@@ -174,7 +164,6 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         }
 
         final hasLinks = widget.state.links(it.id).isNotEmpty;
-
         final Color statusColor = switch (it.status) {
           ItemStatus.completed => Colors.green,
           ItemStatus.archived  => Colors.grey,
@@ -195,13 +184,11 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         }
 
         Future<void> _swipeStartToEnd() async {
-          final s = it.status;
-          final next = s == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed;
+          final s = it.status; final next = s == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed;
           widget.state.setStatus(it.id, next);
         }
         Future<void> _swipeEndToStart() async {
-          final s = it.status;
-          final next = s == ItemStatus.archived ? ItemStatus.normal : ItemStatus.archived;
+          final s = it.status; final next = s == ItemStatus.archived ? ItemStatus.normal : ItemStatus.archived;
           widget.state.setStatus(it.id, next);
         }
 
