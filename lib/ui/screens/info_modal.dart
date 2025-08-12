@@ -33,6 +33,18 @@ class _InfoModalState extends State<InfoModal>{
   }
   @override void dispose(){ _deb?.cancel(); _debN?.cancel(); ed.dispose(); note.dispose(); super.dispose(); }
 
+  void _openFilters(BuildContext ctx) {
+    showModalBottomSheet(
+      context: ctx,
+      builder: (_) => const SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('Filtros avanzados (mismos controles que en Ideas/Acciones).'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext c){
     return AnimatedBuilder(animation: widget.st, builder: (ctx, __) {
@@ -72,14 +84,14 @@ class _InfoModalState extends State<InfoModal>{
                     onChanged: (t) { _deb?.cancel(); _deb = Timer(const Duration(milliseconds: 250), ()=>widget.st.updateText(cur.id, t)); },
                   ),
                 ),
-                // Relacionado (mismo bloque, 1 panel, check a la derecha)
+                // Relacionado: MISMO buscador (tune visible) + mismo bloque visual
                 ContentBlock(
                   state: widget.st,
                   types: null,
                   spec: const SearchSpec(),
                   quickQuery: '',
                   onQuickQuery: (_){},
-                  onOpenFilters: (){},      // oculto
+                  onOpenFilters: () => _openFilters(context), // ← mismo botón “tune”
                   showComposer: false,
                   mode: ContentBlockMode.link,
                   anchorId: cur.id,
