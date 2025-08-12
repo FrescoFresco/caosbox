@@ -4,24 +4,24 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/ui/widgets/caos_search_bar.dart';
 import 'package:caosbox/app.dart' show FiltersSheet;
 
-/// Módulo de buscador unificado:
+/// Buscador unificado:
 /// - Campo de búsqueda (lupa, clear)
-/// - Botón "tune" que abre la MISMA hoja de "búsqueda avanzada" (FiltersSheet)
-/// - Import/Export de datos opcional (para listas principales)
-///
-/// No decide qué lista se pinta: eso lo hace ContentBlock.
-/// Aquí sólo gestionamos quick query y SearchSpec (filtros avanzados).
+/// - Botón "tune" que abre la MISMA hoja de "búsqueda avanzada"
+/// - Import/Export de datos opcional
 class UnifiedSearch extends StatefulWidget {
   final AppState state;
 
-  /// Controla el texto de búsqueda rápida.
+  /// Control del texto de búsqueda rápida.
   final TextEditingController controller;
 
   /// Especificación de filtros avanzados activa.
   final SearchSpec spec;
 
-  /// Notifica cambios de spec cuando el usuario pulsa "Aplicar" en FiltersSheet.
+  /// Notifica cambios de spec cuando el usuario pulsa "Aplicar".
   final ValueChanged<SearchSpec> onSpecChanged;
+
+  /// Si se provee, se usará este callback para abrir el modal (en vez de FiltersSheet interno).
+  final VoidCallback? openFilters;
 
   /// Opcionales para Data IO (sólo en listas principales)
   final VoidCallback? onExportData;
@@ -33,6 +33,7 @@ class UnifiedSearch extends StatefulWidget {
     required this.controller,
     required this.spec,
     required this.onSpecChanged,
+    this.openFilters,
     this.onExportData,
     this.onImportData,
   });
@@ -42,7 +43,7 @@ class UnifiedSearch extends StatefulWidget {
 }
 
 class _UnifiedSearchState extends State<UnifiedSearch> {
-  Future<void> _openFilters() async {
+  Future<void> _openFiltersInternal() async {
     final updated = await showModalBottomSheet<SearchSpec>(
       context: context,
       isScrollControlled: true,
@@ -55,7 +56,7 @@ class _UnifiedSearchState extends State<UnifiedSearch> {
   Widget build(BuildContext context) {
     return CaosSearchBar(
       controller: widget.controller,
-      onOpenFilters: _openFilters,
+      onOpenFilters: widget.openFilters ?? _openFiltersInternal,
       onExportData: widget.onExportData,
       onImportData: widget.onImportData,
     );
