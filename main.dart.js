@@ -37430,12 +37430,12 @@ this.a.c.a_(this.gMk())},
 l(){this.a.c.I(this.gMk())
 this.aB()},
 a7E(){return this.a9(new A.ach())},
-O(a){var s,r=this,q=null,p=r.a.c,o=t.p,n=A.b([A.ju(A.rW(p,A.arp(q,B.dt,q,q,q,q,q,q,!0,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,"Buscar\u2026 (usa -palabra para excluir)",q,q,q,q,q,!0,q,q,q,!0,!0,q,B.EU,q,q,q,q,q,q,p.a.a.length!==0?A.ft(q,q,B.ET,q,q,p.gadW(p),q,q,"Limpiar"):q,q,q,q,q),q,1,q,q,q))],o)
-B.b.S(n,A.b([B.hK,A.ft(q,q,B.EO,q,q,r.a.e,q,q,"Filtros")],o))
+O(a){var s,r=this,q=null,p=r.a.c,o=t.p,n=A.b([A.ju(A.rW(p,A.arp(q,B.dt,q,q,q,q,q,q,!0,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,"Buscar\u2026 (usa -palabra para excluir)",q,q,q,q,q,!0,q,q,q,!0,!0,q,B.EU,q,q,q,q,q,q,p.a.a.length!==0?A.ft(q,q,B.ET,q,q,p.gadW(p),q,q,q):q,q,q,q,q),q,1,q,q,q))],o)
+B.b.S(n,A.b([B.hK,A.ft(q,q,B.EO,q,q,r.a.e,q,q,q)],o))
 s=r.a.f
-if(s!=null)B.b.S(n,A.b([B.hK,A.ft(q,q,B.ni,q,q,s,q,q,"Exportar datos")],o))
+if(s!=null)B.b.S(n,A.b([B.hK,A.ft(q,q,B.ni,q,q,s,q,q,q)],o))
 s=r.a.r
-if(s!=null)B.b.S(n,A.b([B.hK,A.ft(q,q,B.nj,q,q,s,q,q,"Importar datos")],o))
+if(s!=null)B.b.S(n,A.b([B.hK,A.ft(q,q,B.nj,q,q,s,q,q,q)],o))
 return A.k2(n,B.X,B.a0,B.aw)}}
 A.ach.prototype={
 $0(){},
