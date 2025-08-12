@@ -20,17 +20,21 @@ class ContentBlock extends StatefulWidget {
   final AppState state;
   final Set<ItemType>? types;
 
-  /// SearchSpec vigente (viene del padre y/o se mantiene localmente).
+  /// SearchSpec vigente.
   final SearchSpec spec;
 
   /// Texto de búsqueda rápida vigente.
   final String quickQuery;
 
-  /// Notifica cambios en el texto rápido hacia el padre.
+  /// Notifica cambios en el texto rápido.
   final ValueChanged<String> onQuickQuery;
 
-  /// (Nuevo) Notifica cambios en el SearchSpec (cuando se aplica la hoja avanzada).
+  /// Notifica cambios en el SearchSpec (cuando se aplica la hoja avanzada).
   final ValueChanged<SearchSpec>? onSpecChanged;
+
+  /// (Compat) callback externo para abrir la hoja de filtros. Si no se provee,
+  /// se abre internamente (FiltersSheet).
+  final VoidCallback? onOpenFilters;
 
   final bool showComposer;            // añadir bloques (sólo listas B1/B2)
   final ContentBlockMode mode;
@@ -47,6 +51,7 @@ class ContentBlock extends StatefulWidget {
     required this.quickQuery,
     required this.onQuickQuery,
     this.onSpecChanged,
+    this.onOpenFilters,               // ← reintroducido (opcional)
     this.showComposer = false,
     this.mode = ContentBlockMode.list,
     this.anchorId,
@@ -63,7 +68,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
   late final TextEditingController _q;
   late final TextEditingController _composer;
 
-  // Mantengo una copia local del spec para poder usar ContentBlock sin onSpecChanged (p.ej. Relacionado en InfoModal).
+  // Copia local del spec (para poder usar ContentBlock sin onSpecChanged).
   late SearchSpec _spec;
 
   @override
@@ -144,7 +149,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         return Padding(
           padding: const EdgeInsets.all(12),
           child: Column(children: [
-            // ← BUSCADOR UNIFICADO (campo + botón que abre FiltersSheet)
+            // Buscador unificado (campo + botón que abre FiltersSheet o callback externo)
             UnifiedSearch(
               state: widget.state,
               controller: _q,
@@ -153,6 +158,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
                 setState(()=> _spec = s);
                 widget.onSpecChanged?.call(s);
               },
+              openFilters: widget.onOpenFilters,   // ← si viene de fuera, úsalo
               onExportData: showDataIO ? onExportData : null,
               onImportData: showDataIO ? onImportData : null,
             ),
