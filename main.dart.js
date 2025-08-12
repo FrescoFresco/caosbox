@@ -37512,7 +37512,7 @@ p=new A.ad1(i,g)
 g=i.a
 o=g.x&&g.y===B.fl
 n=g.y===B.fl
-g=n?g.w:j
+g=g.w
 m=n?q:j
 l=n?p:j
 k=t.p
@@ -37702,13 +37702,13 @@ this.a.c.a_(this.gMj())},
 l(){this.a.c.I(this.gMj())
 this.aB()},
 a7D(){return this.a9(new A.aiA())},
-O(a){var s=this,r=null,q=s.a.c,p=t.p,o=A.b([A.ju(A.rW(q,A.arm(r,B.dt,r,r,r,r,r,r,!0,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,r,"Buscar\u2026 (usa -palabra para excluir)",r,r,r,r,r,!0,r,r,r,!0,!0,r,B.ET,r,r,r,r,r,r,q.a.a.length!==0?A.ft(r,r,B.ES,r,r,q.gadU(q),r,r,"Limpiar"):r,r,r,r,r),r,1,r,r,r))],p),n=s.a.e
-if(n!=null)B.b.S(o,A.b([B.hJ,A.ft(r,r,B.EN,r,r,n,r,r,"Filtros")],p))
-n=s.a.f
-if(n!=null)B.b.S(o,A.b([B.hJ,A.ft(r,r,B.ni,r,r,n,r,r,"Exportar datos")],p))
-n=s.a.r
-if(n!=null)B.b.S(o,A.b([B.hJ,A.ft(r,r,B.nj,r,r,n,r,r,"Importar datos")],p))
-return A.k2(o,B.X,B.a0,B.aw)}}
+O(a){var s,r=this,q=null,p=r.a.c,o=t.p,n=A.b([A.ju(A.rW(p,A.arm(q,B.dt,q,q,q,q,q,q,!0,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,q,"Buscar\u2026 (usa -palabra para excluir)",q,q,q,q,q,!0,q,q,q,!0,!0,q,B.ET,q,q,q,q,q,q,p.a.a.length!==0?A.ft(q,q,B.ES,q,q,p.gadU(p),q,q,"Limpiar"):q,q,q,q,q),q,1,q,q,q))],o)
+B.b.S(n,A.b([B.hJ,A.ft(q,q,B.EN,q,q,r.a.e,q,q,"Filtros")],o))
+s=r.a.f
+if(s!=null)B.b.S(n,A.b([B.hJ,A.ft(q,q,B.ni,q,q,s,q,q,"Exportar datos")],o))
+s=r.a.r
+if(s!=null)B.b.S(n,A.b([B.hJ,A.ft(q,q,B.nj,q,q,s,q,q,"Importar datos")],o))
+return A.k2(n,B.X,B.a0,B.aw)}}
 A.aiA.prototype={
 $0(){},
 $S:0}
