@@ -4,7 +4,7 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/enums.dart';
 
 import 'package:caosbox/domain/search/search_models.dart';
-import 'package:caosbox/ui/widgets/items_block.dart';
+import 'package:caosbox/ui/widgets/content_block.dart';
 
 class GenericScreen extends StatelessWidget {
   final Block block;
@@ -27,7 +27,7 @@ class GenericScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = block.type!;
-    return ItemsBlock(
+    return ContentBlock(
       state: state,
       types: { t },
       spec: spec,
@@ -35,7 +35,7 @@ class GenericScreen extends StatelessWidget {
       onQuickQuery: onQuickQuery,
       onOpenFilters: () => onOpenFilters(context, t),
       showComposer: true,
-      mode: ItemsBlockMode.list,
+      mode: ContentBlockMode.list,
       checkboxSide: CheckboxSide.none,
     );
   }
