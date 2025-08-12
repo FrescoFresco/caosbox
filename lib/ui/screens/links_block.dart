@@ -15,20 +15,6 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
   String? _selected;
   @override bool get wantKeepAlive => true;
 
-  void _openFilters(BuildContext ctx) {
-    // Aquí puedes abrir tu modal de filtros avanzado (mismo que usas en Ideas/Acciones).
-    // De momento mostramos un diálogo simple para mantener funcional el botón.
-    showModalBottomSheet(
-      context: ctx,
-      builder: (_) => const SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Filtros avanzados (mismos controles que en Ideas/Acciones).'),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -41,7 +27,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: const SearchSpec(),
         quickQuery: '',
         onQuickQuery: (_) {},
-        onOpenFilters: () => _openFilters(context), // ← mismo botón “tune”
+        onOpenFilters: () {},     // no-op (icon NO se mostrará en select)
         showComposer: false,
         mode: ContentBlockMode.select,
         selectedId: _selected,
@@ -58,7 +44,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: const SearchSpec(),
         quickQuery: '',
         onQuickQuery: (_) {},
-        onOpenFilters: () => _openFilters(context), // ← mismo botón “tune”
+        onOpenFilters: () {},     // no-op (icon NO se mostrará en link)
         showComposer: false,
         mode: ContentBlockMode.link,
         anchorId: _selected,
