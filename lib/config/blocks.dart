@@ -4,6 +4,9 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/screens/links_block.dart';
 
+// ⬇️ IMPORTA tu callback REAL (el mismo que usa B1/B2) desde donde lo tengas
+import 'package:caosbox/app.dart' show openAdvancedFilters; // ajusta la ruta si es otra
+
 /// Config por tipo (B1/B2)
 class ItemTypeCfg {
   final String prefix;
@@ -57,23 +60,9 @@ class Block {
   }) : type = null;
 }
 
-/// Puente provisional para abrir tu modal REAL de búsqueda avanzada (B1/B2).
-/// Si ya tienes la función real en otro archivo, impórtala y elimina esto.
-Future<void> openAdvancedFilters(BuildContext c) async {
-  await showModalBottomSheet(
-    context: c,
-    builder: (_) => const SafeArea(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text('Aquí abre tu modal real de Búsqueda avanzada (mismo que B1/B2).'),
-      ),
-    ),
-  );
-}
-
 /// Pestañas: Ideas, Acciones, Enlaces
 final blocks = <Block>[
-  // IMPORTANTE: sin `const` aquí para evitar el error de "Not a constant expression"
+  // sin `const` para evitar "Not a constant expression" al leer ideasCfg/actionsCfg
   Block.item(
     id: 'ideas',
     icon: ideasCfg.icon,
@@ -86,14 +75,14 @@ final blocks = <Block>[
     label: actionsCfg.label,
     type: ItemType.action,
   ),
-  // Enlaces reutiliza el MISMO modal de filtros que B1/B2 via callback
+  // Enlaces: usa EXACTO el mismo modal de filtros que B1/B2 via callback
   Block.custom(
     id: 'links',
     icon: Icons.link,
     label: 'Enlaces',
     custom: (ctx, st) => LinksBlock(
       state: st,
-      onOpenFilters: (c) => openAdvancedFilters(c), // cambia por tu callback real si ya existe
+      onOpenFilters: (c) => openAdvancedFilters(c), // ← tu función real ya existente
     ),
   ),
 ];
