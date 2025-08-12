@@ -27,7 +27,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: const SearchSpec(),
         quickQuery: '',
         onQuickQuery: (_) {},
-        onOpenFilters: () {},     // no-op (icon NO se mostrará en select)
+        onOpenFilters: () {},     // ignorado internamente (ContentBlock abre su propio panel)
         showComposer: false,
         mode: ContentBlockMode.select,
         selectedId: _selected,
@@ -44,7 +44,7 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         spec: const SearchSpec(),
         quickQuery: '',
         onQuickQuery: (_) {},
-        onOpenFilters: () {},     // no-op (icon NO se mostrará en link)
+        onOpenFilters: () {},     // ignorado internamente
         showComposer: false,
         mode: ContentBlockMode.link,
         anchorId: _selected,
