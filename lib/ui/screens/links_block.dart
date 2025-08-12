@@ -3,19 +3,12 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/ui/widgets/content_block.dart';
 
-/// Enlaces: usa el MISMO modal de filtros avanzados que B1/B2.
-/// Se inyecta desde blocks.dart como callback y se reutiliza en ambas columnas.
+// Importa la hoja real de filtros avanzada (misma UI que B1/B2)
+import 'package:caosbox/app.dart' show FiltersSheet;
+
 class LinksBlock extends StatefulWidget {
   final AppState state;
-
-  /// Callback que abre tu modal de “Búsqueda avanzada” (el de B1/B2).
-  final Future<void> Function(BuildContext) onOpenFilters;
-
-  const LinksBlock({
-    super.key,
-    required this.state,
-    required this.onOpenFilters,
-  });
+  const LinksBlock({super.key, required this.state});
 
   @override
   State<LinksBlock> createState() => _LinksBlockState();
@@ -23,6 +16,8 @@ class LinksBlock extends StatefulWidget {
 
 class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMixin {
   String? _selected;
+
+  // Cada columna mantiene su búsqueda y spec independientes
   String _leftQuery  = '';
   String _rightQuery = '';
   SearchSpec _leftSpec  = const SearchSpec();
@@ -30,6 +25,26 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
 
   @override
   bool get wantKeepAlive => true;
+
+  // Abre el MISMO modal (FiltersSheet) que B1/B2 para la columna IZQ
+  Future<void> _openLeftFilters() async {
+    final updated = await showModalBottomSheet<SearchSpec>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => FiltersSheet(initial: _leftSpec.clone(), state: widget.state),
+    );
+    if (updated != null) setState(() => _leftSpec = updated.clone());
+  }
+
+  // Abre el MISMO modal (FiltersSheet) que B1/B2 para la columna DCHA
+  Future<void> _openRightFilters() async {
+    final updated = await showModalBottomSheet<SearchSpec>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => FiltersSheet(initial: _rightSpec.clone(), state: widget.state),
+    );
+    if (updated != null) setState(() => _rightSpec = updated.clone());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,16 +54,16 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
       child: ContentBlock(
         key: const ValueKey('links_left'),
         state: widget.state,
-        types: null,                    // ambos tipos
-        spec: _leftSpec,
+        types: null,                     // ambos tipos
+        spec: _leftSpec,                 // spec propio columna IZQ
         quickQuery: _leftQuery,
         onQuickQuery: (q) => setState(() => _leftQuery = q),
-        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal que B1/B2
+        onOpenFilters: _openLeftFilters, // ← mismo modal que B1/B2 (FiltersSheet)
         showComposer: false,
         mode: ContentBlockMode.select,
         selectedId: _selected,
         onSelect: (id) => setState(() => _selected = id),
-        checkboxSide: CheckboxSide.right, // checkbox derecha en la columna izq
+        checkboxSide: CheckboxSide.right, // checkbox a la derecha en columna izq
       ),
     );
 
@@ -57,14 +72,14 @@ class _LinksBlockState extends State<LinksBlock> with AutomaticKeepAliveClientMi
         key: ValueKey('links_right_${_selected ?? "none"}'),
         state: widget.state,
         types: null,
-        spec: _rightSpec,
+        spec: _rightSpec,                // spec propio columna DCHA
         quickQuery: _rightQuery,
         onQuickQuery: (q) => setState(() => _rightQuery = q),
-        onOpenFilters: () => widget.onOpenFilters(context), // ← MISMO modal
+        onOpenFilters: _openRightFilters, // ← mismo modal que B1/B2 (FiltersSheet)
         showComposer: false,
         mode: ContentBlockMode.link,
         anchorId: _selected,
-        checkboxSide: CheckboxSide.left, // checkbox izquierda en la columna dcha
+        checkboxSide: CheckboxSide.left, // checkbox a la izquierda en columna dcha
       ),
     );
 
