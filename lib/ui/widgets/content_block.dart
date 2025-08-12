@@ -13,7 +13,7 @@ import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
 
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
-import 'package:caosbox/ui/widgets/simple_block_tile.dart';
+import 'package:caosbox/ui/widgets/content_tile.dart';
 
 enum ContentBlockMode { list, select, link }
 enum CheckboxSide { none, left, right }
@@ -157,64 +157,76 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
 
   Widget _buildList(List<Item> items) {
     final cbSide = switch (widget.checkboxSide) {
-      CheckboxSide.left  => SimpleCheckboxSide.left,
-      CheckboxSide.right => SimpleCheckboxSide.right,
-      _ => SimpleCheckboxSide.none,
+      CheckboxSide.left  => TileCheckboxSide.left,
+      CheckboxSide.right => TileCheckboxSide.right,
+      _ => TileCheckboxSide.none,
     };
 
-    switch (widget.mode) {
-      case ContentBlockMode.list:
-        return ListView.builder(
-          itemCount: items.length,
-          itemBuilder: (_, i) {
-            final it = items[i];
-            final hasLinks = widget.state.links(it.id).isNotEmpty;
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (_, i) {
+        final it = items[i];
+        // En modo link no mostramos el propio ancla
+        if (widget.mode == ContentBlockMode.link && widget.anchorId != null && it.id == widget.anchorId) {
+          return const SizedBox.shrink();
+        }
 
-            return SimpleBlockTile(
-              key: ValueKey('list_${it.id}'),
-              id: it.id,
-              text: it.text,
-              hasLinks: hasLinks,
-              checkboxSide: SimpleCheckboxSide.none,
-              onInfo: () => showInfoModal(context, it, widget.state),
-            );
-          },
+        final hasLinks = widget.state.links(it.id).isNotEmpty;
+
+        // Status → color franja
+        final Color statusColor = switch (it.status) {
+          ItemStatus.completed => Colors.green,
+          ItemStatus.archived  => Colors.grey,
+          _ => Colors.transparent,
+        };
+
+        // Tipo → icono
+        final IconData typeIcon = it.type == ItemType.idea ? Icons.lightbulb : Icons.assignment;
+
+        // Checkbox y comportamiento por modo
+        bool checked = false;
+        VoidCallback? onToggleCheck;
+
+        if (widget.mode == ContentBlockMode.select) {
+          checked = (widget.selectedId == it.id);
+          onToggleCheck = () => widget.onSelect?.call(checked ? null : it.id);
+        } else if (widget.mode == ContentBlockMode.link) {
+          final anchor = widget.anchorId;
+          checked = anchor != null && widget.state.links(anchor).contains(it.id);
+          onToggleCheck = () {
+            if (anchor != null) widget.state.toggleLink(anchor, it.id);
+          };
+        }
+
+        Future<void> _swipeStartToEnd() async {
+          // completar/normal
+          final s = it.status;
+          final next = s == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed;
+          widget.state.setStatus(it.id, next);
+        }
+        Future<void> _swipeEndToStart() async {
+          // archivar/normal
+          final s = it.status;
+          final next = s == ItemStatus.archived ? ItemStatus.normal : ItemStatus.archived;
+          widget.state.setStatus(it.id, next);
+        }
+
+        return ContentTile(
+          key: ValueKey('ct_${widget.mode}_${widget.anchorId ?? "none"}_${it.id}_${it.status.name}'),
+          id: it.id,
+          text: it.text,
+          typeIcon: typeIcon,
+          hasLinks: hasLinks,
+          statusColor: statusColor,
+          checkboxSide: widget.mode == ContentBlockMode.list ? TileCheckboxSide.none : cbSide,
+          checked: checked,
+          onToggleCheck: onToggleCheck,
+          onLongPress: () => showInfoModal(context, it, widget.state),
+          onSwipeStartToEnd: _swipeStartToEnd,
+          onSwipeEndToStart: _swipeEndToStart,
         );
-
-      case ContentBlockMode.select:
-      case ContentBlockMode.link:
-        final anchor = widget.mode == ContentBlockMode.link ? widget.anchorId : null;
-        return ListView.builder(
-          key: ValueKey('sel_link_${anchor ?? "none"}'),
-          itemCount: items.length,
-          itemBuilder: (_, i) {
-            final it = items[i];
-            if (anchor != null && it.id == anchor) return const SizedBox.shrink();
-
-            final hasLinks = widget.state.links(it.id).isNotEmpty;
-            bool checked; VoidCallback? onToggle;
-
-            if (widget.mode == ContentBlockMode.select) {
-              checked = (widget.selectedId == it.id);
-              onToggle = () => widget.onSelect?.call(checked ? null : it.id);
-            } else {
-              checked = anchor != null && widget.state.links(anchor).contains(it.id);
-              onToggle = () => widget.state.toggleLink(anchor!, it.id);
-            }
-
-            return SimpleBlockTile(
-              key: ValueKey('sel_link_${anchor ?? "sel"}_${it.id}'),
-              id: it.id,
-              text: it.text,
-              hasLinks: hasLinks,
-              checkboxSide: cbSide,
-              checked: checked,
-              onToggleCheck: onToggle,
-              onInfo: () => showInfoModal(context, it, widget.state),
-            );
-          },
-        );
-    }
+      },
+    );
   }
 
   String _composerHint() {
