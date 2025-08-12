@@ -72,14 +72,14 @@ class _InfoModalState extends State<InfoModal>{
                     onChanged: (t) { _deb?.cancel(); _deb = Timer(const Duration(milliseconds: 250), ()=>widget.st.updateText(cur.id, t)); },
                   ),
                 ),
-                // Relacionado (sin botón de filtros)
+                // Relacionado — usa el mismo ContentBlock (con su propio panel de filtros)
                 ContentBlock(
                   state: widget.st,
                   types: null,
                   spec: const SearchSpec(),
                   quickQuery: '',
                   onQuickQuery: (_){},
-                  onOpenFilters: () {},              // no-op; el botón no se muestra en modo link
+                  onOpenFilters: () {},      // ignorado internamente
                   showComposer: false,
                   mode: ContentBlockMode.link,
                   anchorId: cur.id,
