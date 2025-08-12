@@ -33,18 +33,6 @@ class _InfoModalState extends State<InfoModal>{
   }
   @override void dispose(){ _deb?.cancel(); _debN?.cancel(); ed.dispose(); note.dispose(); super.dispose(); }
 
-  void _openFilters(BuildContext ctx) {
-    showModalBottomSheet(
-      context: ctx,
-      builder: (_) => const SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Filtros avanzados (mismos controles que en Ideas/Acciones).'),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext c){
     return AnimatedBuilder(animation: widget.st, builder: (ctx, __) {
@@ -63,7 +51,7 @@ class _InfoModalState extends State<InfoModal>{
                 child: Row(children: [
                   Icon(ico(cur.type)), const SizedBox(width: 8),
                   Expanded(child: Text('${lbl(cur.type)} • ${cur.id}', style: Style.title, overflow: TextOverflow.ellipsis)),
-                  IconButton(tooltip: 'Cerrar', icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
                 ]),
               ),
               const TabBar(tabs: [
@@ -84,14 +72,14 @@ class _InfoModalState extends State<InfoModal>{
                     onChanged: (t) { _deb?.cancel(); _deb = Timer(const Duration(milliseconds: 250), ()=>widget.st.updateText(cur.id, t)); },
                   ),
                 ),
-                // Relacionado: MISMO buscador (tune visible) + mismo bloque visual
+                // Relacionado (sin botón de filtros)
                 ContentBlock(
                   state: widget.st,
                   types: null,
                   spec: const SearchSpec(),
                   quickQuery: '',
                   onQuickQuery: (_){},
-                  onOpenFilters: () => _openFilters(context), // ← mismo botón “tune”
+                  onOpenFilters: () {},              // no-op; el botón no se muestra en modo link
                   showComposer: false,
                   mode: ContentBlockMode.link,
                   anchorId: cur.id,
