@@ -4,7 +4,7 @@ import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/screens/links_block.dart';
 
-/// Config básica por tipo (B1/B2)
+/// Config por tipo (B1/B2)
 class ItemTypeCfg {
   final String prefix;
   final IconData icon;
@@ -18,12 +18,13 @@ class ItemTypeCfg {
   });
 }
 
-const ideasCfg  = ItemTypeCfg(
+const ideasCfg = ItemTypeCfg(
   prefix: 'B1',
   icon: Icons.lightbulb,
   label: 'Ideas',
   hint: 'Escribe tu idea...',
 );
+
 const actionsCfg = ItemTypeCfg(
   prefix: 'B2',
   icon: Icons.assignment,
@@ -38,11 +39,8 @@ class Block {
   final String id;
   final IconData icon;
   final String label;
-
-  /// Si es un bloque de items (Ideas/Acciones), indica el tipo;
-  /// si es un bloque totalmente custom (Enlaces), usa [custom].
-  final ItemType? type;
-  final BlockBuilder? custom;
+  final ItemType? type;          // si es item (Ideas/Acciones)
+  final BlockBuilder? custom;    // si es custom (Enlaces)
 
   const Block.item({
     required this.id,
@@ -59,43 +57,43 @@ class Block {
   }) : type = null;
 }
 
-/// 🔧 Puente provisional para abrir el modal de “Búsqueda avanzada”.
-/// Sustituye el contenido por tu modal REAL (el mismo que usas en B1/B2).
+/// Puente provisional para abrir tu modal REAL de búsqueda avanzada (B1/B2).
+/// Si ya tienes la función real en otro archivo, impórtala y elimina esto.
 Future<void> openAdvancedFilters(BuildContext c) async {
   await showModalBottomSheet(
     context: c,
     builder: (_) => const SafeArea(
       child: Padding(
         padding: EdgeInsets.all(16),
-        child: Text('Aquí se abre tu modal real de Búsqueda avanzada (mismo que B1/B2).'),
+        child: Text('Aquí abre tu modal real de Búsqueda avanzada (mismo que B1/B2).'),
       ),
     ),
   );
 }
 
-/// Lista de pestañas (B1, B2, Enlaces)
+/// Pestañas: Ideas, Acciones, Enlaces
 final blocks = <Block>[
-  const Block.item(
+  // IMPORTANTE: sin `const` aquí para evitar el error de "Not a constant expression"
+  Block.item(
     id: 'ideas',
     icon: ideasCfg.icon,
     label: ideasCfg.label,
     type: ItemType.idea,
   ),
-  const Block.item(
+  Block.item(
     id: 'actions',
     icon: actionsCfg.icon,
     label: actionsCfg.label,
     type: ItemType.action,
   ),
-
-  // Enlaces: usa el MISMO modal de filtros avanzado que B1/B2 (a través del callback).
+  // Enlaces reutiliza el MISMO modal de filtros que B1/B2 via callback
   Block.custom(
     id: 'links',
     icon: Icons.link,
     label: 'Enlaces',
     custom: (ctx, st) => LinksBlock(
       state: st,
-      onOpenFilters: (c) => openAdvancedFilters(c), // ← reemplaza por tu función real si ya la tienes
+      onOpenFilters: (c) => openAdvancedFilters(c), // cambia por tu callback real si ya existe
     ),
   ),
 ];
