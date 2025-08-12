@@ -8,7 +8,7 @@ import 'package:caosbox/domain/search/search_models.dart';
 import 'package:caosbox/domain/search/search_engine.dart';
 import 'package:caosbox/search/search_io.dart';
 
-import 'package:caosbox/ui/widgets/caos_search_bar.dart';  // ← nuevo buscador unificado
+import 'package:caosbox/ui/widgets/caos_search_bar.dart';
 import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
 import 'package:caosbox/ui/widgets/content_tile.dart';
@@ -99,7 +99,10 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         final effective = _mergeQuick(widget.spec, _q.text);
         final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
 
-        final onExportData = () { final json = exportDataJson(widget.state); _showLong(context, 'Datos (JSON)', json); };
+        final onExportData = () {
+          final json = exportDataJson(widget.state);
+          _showLong(context, 'Datos (JSON)', json);
+        };
         final onImportData = () async {
           final ctrl = TextEditingController();
           final ok = await showDialog<bool>(
@@ -107,8 +110,10 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
             builder: (dctx) => AlertDialog(
               title: const Text('Importar datos (reemplaza)'),
               content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-              actions: [ TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                         FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')), ],
+              actions: [
+                TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
+                FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
+              ],
             ),
           );
           if (ok == true) {
@@ -118,7 +123,7 @@ class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClie
         };
 
         final showComposer = widget.showComposer && widget.mode == ContentBlockMode.list;
-        final showFilters  = true;                  // SIEMPRE el botón de filtros
+        final showFilters  = true;                        // SIEMPRE botón filtros
         final showDataIO   = widget.mode == ContentBlockMode.list; // IO solo B1/B2
 
         return Padding(
