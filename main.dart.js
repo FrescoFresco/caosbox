@@ -6755,7 +6755,7 @@ q=J.bf(q==null?[]:q)
 for(;q.v();){p=q.gP()
 o=J.bl(p)
 n=J.d(o.h(p,"type"),"idea")?B.aV:B.bh
-m=o.h(p,"status")
+m=A.n(o.h(p,"status")).toLowerCase()
 $label0$0:{if("completed"===m){l=B.fO
 break $label0$0}if("archived"===m){l=B.fP
 break $label0$0}l=B.fN
