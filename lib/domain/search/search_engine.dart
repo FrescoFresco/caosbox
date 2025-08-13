@@ -1,61 +1,105 @@
+import 'package:caosbox/app/state/app_state.dart';
 import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/utils/tri.dart';
+
 import 'package:caosbox/domain/search/search_models.dart';
-import 'package:caosbox/app/state/app_state.dart';
 
-List<Item> applySearch(AppState st, List<Item> items, SearchSpec spec) {
-  if (spec.clauses.isEmpty) return items;
+Iterable<Item> applySearch(AppState st, List<Item> src, SearchSpec spec) sync* {
+  for (final it in src) {
+    if (_matchAll(st, it, spec)) yield it;
+  }
+}
 
-  bool passEnum(EnumClause c, Item it) {
-    bool test(String v) {
-      if (c.include.isNotEmpty && !c.include.contains(v)) return false;
-      if (c.exclude.isNotEmpty && c.exclude.contains(v)) return false;
-      return true;
-    }
-    switch (c.field) {
-      case 'type':   return test(it.type.name);
-      case 'status': return test(it.status.name);
-      case 'hasLinks': return test(st.links(it.id).isNotEmpty ? 'true' : 'false');
-      default: return true;
+bool _matchAll(AppState st, Item it, SearchSpec spec) {
+  for (final c in spec.clauses) {
+    if (c is EnumClause) {
+      if (!_matchEnum(it, c)) return false;
+    } else if (c is BoolClause) {
+      if (!_matchBool(st, it, c)) return false;
+    } else if (c is RelationClause) {
+      if (!_matchRelation(st, it, c)) return false;
+    } else if (c is TextClause) {
+      if (!_matchText(st, it, c)) return false;
     }
   }
+  return true;
+}
 
-  bool passText(TextClause tc, Item it) {
-    // Alcance
-    final fields = tc.fields.entries.where((e) => e.value != Tri.off).map((e) => e.key).toSet();
-    final searchAll = fields.isEmpty;
-    final id = it.id.toLowerCase();
-    final content = it.text.toLowerCase();
-    final note = (st.note(it.id)).toLowerCase();
-
-    bool containsToken(String tok) {
-      if (searchAll || fields.contains('id')) if (id.contains(tok)) return true;
-      if (searchAll || fields.contains('content')) if (content.contains(tok)) return true;
-      if (searchAll || fields.contains('note')) if (note.contains(tok)) return true;
-      return false;
-    }
-
-    // Includes: todos deben aparecer en alguno de los campos del alcance
-    for (final t in tc.tokens.where((t) => t.mode == Tri.include)) {
-      if (t.t.isEmpty) continue;
-      if (!containsToken(t.t.toLowerCase())) return false;
-    }
-    // Excludes: ninguno debe aparecer
-    for (final t in tc.tokens.where((t) => t.mode == Tri.exclude)) {
-      if (t.t.isEmpty) continue;
-      if (containsToken(t.t.toLowerCase())) return false;
-    }
-    return true;
+bool _matchEnum(Item it, EnumClause c) {
+  String value = '';
+  switch (c.field) {
+    case 'type':
+      value = it.type.name; // 'idea' | 'action'
+      break;
+    case 'status':
+      value = it.status.name.toLowerCase(); // 'normal' | 'completed' | 'archived'
+      break;
+    default:
+      return true; // campo desconocido => no filtra
   }
 
-  bool passAll(Item it) {
-    for (final c in spec.clauses) {
-      if (c is EnumClause) { if (!passEnum(c, it)) return false; }
-      if (c is TextClause) { if (!passText(c, it)) return false; }
-    }
-    return true;
+  if (c.include.isNotEmpty && !c.include.contains(value)) return false;
+  if (c.exclude.contains(value)) return false;
+  return true;
+}
+
+bool _matchBool(AppState st, Item it, BoolClause c) {
+  if (c.mode == Tri.off) return true;
+  switch (c.field) {
+    case 'hasLinks':
+      final has = st.links(it.id).isNotEmpty;
+      return c.mode == Tri.include ? has : !has;
+  }
+  return true;
+}
+
+bool _matchRelation(AppState st, Item it, RelationClause c) {
+  if (c.mode == Tri.off) return true;
+  // Evita autovínculo
+  if (c.anchorId == it.id) {
+    return c.mode == Tri.exclude; // "incluir relacionado con sí mismo" => falso
+  }
+  final related = st.links(c.anchorId).contains(it.id);
+  return c.mode == Tri.include ? related : !related;
+}
+
+bool _matchText(AppState st, Item it, TextClause c) {
+  // Determina en qué campos mirar
+  final useId     = (c.fields['id'] ?? Tri.off)     != Tri.off;
+  final useText   = (c.fields['content'] ?? Tri.off)!= Tri.off;
+  final useNote   = (c.fields['note'] ?? Tri.off)   != Tri.off;
+
+  if (!useId && !useText && !useNote) return true;
+
+  final id    = it.id.toLowerCase();
+  final body  = it.text.toLowerCase();
+  final note  = st.note(it.id).toLowerCase();
+
+  bool contains(String hay, String needle) {
+    if (needle.isEmpty) return true;
+    return hay.contains(needle);
+  }
+  bool prefix(String hay, String needle) {
+    if (needle.isEmpty) return true;
+    return hay.startsWith(needle);
+  }
+  bool exact(String hay, String needle) => hay == needle;
+
+  bool Function(String, String) cmp;
+  switch (c.match) {
+    case TextMatch.prefix:   cmp = prefix;   break;
+    case TextMatch.exact:    cmp = exact;    break;
+    case TextMatch.contains: cmp = contains; break;
   }
 
-  return items.where(passAll).toList(growable: false);
+  for (final tok in c.tokens) {
+    final q = tok.t.toLowerCase();
+    final hit = ((useId   && cmp(id, q)) ||
+                 (useText && cmp(body, q)) ||
+                 (useNote && cmp(note, q)));
+    if (tok.mode == Tri.include && !hit) return false;
+    if (tok.mode == Tri.exclude &&  hit) return false;
+  }
+  return true;
 }
