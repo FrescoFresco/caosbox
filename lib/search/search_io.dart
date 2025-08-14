@@ -107,20 +107,6 @@ void importDataJsonReplace(AppState st, String text) {
 /// ====================== CONSULTA (v3) ======================
 
 String exportQueryJson(SearchSpec s) {
-  Map<String, dynamic> nodeToMap(QueryNode n) {
-    if (n is LeafNode) {
-      return {'clause': clauseToMap(n.clause), if (n.label != null) 'label': n.label};
-    }
-    if (n is GroupNode) {
-      return {
-        'op': n.op == Op.and ? 'AND' : 'OR',
-        'children': [for (final c in n.children) nodeToMap(c)],
-        if (n.label != null) 'label': n.label,
-      };
-    }
-    return {};
-  }
-
   Map<String, dynamic> clauseToMap(Clause c) {
     if (c is TextClause) {
       return {
@@ -146,6 +132,20 @@ String exportQueryJson(SearchSpec s) {
         m['anchorId'] = c.anchorId ?? '';
       }
       return m;
+    }
+    return {};
+  }
+
+  Map<String, dynamic> nodeToMap(QueryNode n) {
+    if (n is LeafNode) {
+      return {'clause': clauseToMap(n.clause), if (n.label != null) 'label': n.label};
+    }
+    if (n is GroupNode) {
+      return {
+        'op': n.op == Op.and ? 'AND' : 'OR',
+        'children': [for (final c in n.children) nodeToMap(c)],
+        if (n.label != null) 'label': n.label,
+      };
     }
     return {};
   }
@@ -187,7 +187,6 @@ QueryNode _mapToNode(dynamic n) {
     ];
     return GroupNode(op: op, children: kids, label: n['label'] is String ? n['label'] : null);
   }
-  // fallback vacío
   return GroupNode(op: Op.and, children: const []);
 }
 
@@ -231,7 +230,6 @@ Clause _mapToClause(dynamic c) {
         _ => Tri.off
       });
     } else {
-      // relation
       return FlagClause(
         field: 'relation',
         mode: switch ('${c['mode']}') {
