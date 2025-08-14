@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Buscador modular: input + botón de filtros.
-/// Úsalo así:
+/// Uso:
 ///   import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
 ///   cx.SearchBar(
-///     controller: _qRel,                  // tu TextEditingController
-///     onChanged: (_) => setState(() {}),  // refrescar lista al teclear
-///     onOpenFilters: _openFilters,        // opcional: abre filtros avanzados
-///     hint: 'Buscar…',                    // opcional
+///     controller: _quick,                   // tu TextEditingController
+///     onChanged: (_) => setState(() {}),    // refrescar al teclear
+///     onOpenFilters: _openFilters,          // callback de filtros (opcional)
+///     hint: 'Buscar…',                      // opcional
 ///   );
 class SearchBar extends StatelessWidget {
   final TextEditingController controller;
