@@ -5,11 +5,9 @@ import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
 
-/// Etiquetas e iconos como en el proyecto original
 String lbl(ItemType t) => t == ItemType.idea ? 'Idea' : 'Acción';
 IconData ico(ItemType t) => t == ItemType.idea ? Icons.lightbulb : Icons.assignment;
 
-/// Formateo de fecha simple (DD/MM/YYYY HH:MM)
 String _fmt(DateTime d) {
   String two(int n) => n.toString().padLeft(2, '0');
   return '${two(d.day)}/${two(d.month)}/${d.year} ${two(d.hour)}:${two(d.minute)}';
@@ -36,9 +34,8 @@ class InfoModal extends StatefulWidget {
 class _InfoModalState extends State<InfoModal> {
   late final TextEditingController _ed;     // Contenido
   late final TextEditingController _note;   // Tiempo / notas
-  late final TextEditingController _qRel;   // Buscador de "Relacionado"
-  Timer? _debT;
-  Timer? _debN;
+  late final TextEditingController _qRel;   // Buscar en Relacionado
+  Timer? _debT, _debN;
 
   @override
   void initState() {
@@ -51,15 +48,11 @@ class _InfoModalState extends State<InfoModal> {
 
   @override
   void dispose() {
-    _debT?.cancel();
-    _debN?.cancel();
-    _ed.dispose();
-    _note.dispose();
-    _qRel.dispose();
+    _debT?.cancel(); _debN?.cancel();
+    _ed.dispose(); _note.dispose(); _qRel.dispose();
     super.dispose();
   }
 
-  // Filtro rápido en "Relacionado": coincide en id | texto | nota
   bool _matchQuick(Item it) {
     final q = _qRel.text.trim().toLowerCase();
     if (q.isEmpty) return true;
@@ -74,10 +67,10 @@ class _InfoModalState extends State<InfoModal> {
       animation: widget.st,
       builder: (_, __) {
         final cur = widget.st.getItem(widget.id)!;
-        final linkedIds = widget.st.links(widget.id);
+        final linked = widget.st.links(widget.id);
         final related = widget.st.all.where((i) => i.id != cur.id).where(_matchQuick).toList();
 
-        // Sincroniza edición externa de notas (si cambió desde fuera)
+        // sync de notas si cambian desde fuera
         final latestNote = widget.st.note(widget.id);
         if (_note.text != latestNote) {
           _note.text = latestNote;
@@ -91,7 +84,7 @@ class _InfoModalState extends State<InfoModal> {
             child: Material(
               child: Column(
                 children: [
-                  // Encabezado
+                  // Header
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Row(
@@ -116,13 +109,12 @@ class _InfoModalState extends State<InfoModal> {
                         IconButton(
                           tooltip: 'Cerrar',
                           icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () => Navigator.pop(context),
                         ),
                       ],
                     ),
                   ),
 
-                  // Tabs
                   const TabBar(
                     tabs: [
                       Tab(icon: Icon(Icons.description), text: 'Contenido'),
@@ -132,11 +124,10 @@ class _InfoModalState extends State<InfoModal> {
                     ],
                   ),
 
-                  // Contenido de cada tab
                   Expanded(
                     child: TabBarView(
                       children: [
-                        // ======= Contenido =======
+                        // ===== Contenido =====
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: LayoutBuilder(
@@ -170,12 +161,11 @@ class _InfoModalState extends State<InfoModal> {
                           ),
                         ),
 
-                        // ======= Relacionado =======
+                        // ===== Relacionado =====
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          padding: const EdgeInsets.fromLTRB(16,16,16,8),
                           child: Column(
                             children: [
-                              // Buscador modular (mismo en todas partes)
                               cx.SearchBar(
                                 controller: _qRel,
                                 onChanged: (_) => setState(() {}),
@@ -183,48 +173,42 @@ class _InfoModalState extends State<InfoModal> {
                                 hint: 'Buscar relacionados…',
                               ),
                               const SizedBox(height: 12),
-
-                              // Lista de relacionados
                               Expanded(
                                 child: related.isEmpty
-                                    ? const Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.link_off, size: 48, color: Colors.grey),
-                                            SizedBox(height: 8),
-                                            Text('Sin relaciones', style: TextStyle(color: Colors.grey)),
-                                          ],
-                                        ),
-                                      )
-                                    : ListView.builder(
-                                        itemCount: related.length,
-                                        itemBuilder: (ctx, i) {
-                                          final li = related[i];
-                                          final ck = linkedIds.contains(li.id);
-                                          return Card(
-                                            child: ListTile(
-                                              title: Text(
-                                                li.text,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              subtitle: Text(li.id),
-                                              trailing: Checkbox(
-                                                value: ck,
-                                                onChanged: (_) => setState(() => widget.st.toggleLink(cur.id, li.id)),
-                                              ),
-                                              onTap: () => showInfoModal(context, li, widget.st),
-                                            ),
-                                          );
-                                        },
+                                  ? const Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.link_off, size: 48, color: Colors.grey),
+                                          SizedBox(height: 8),
+                                          Text('Sin relaciones', style: TextStyle(color: Colors.grey)),
+                                        ],
                                       ),
+                                    )
+                                  : ListView.builder(
+                                      itemCount: related.length,
+                                      itemBuilder: (ctx, i) {
+                                        final li = related[i];
+                                        final ck = linked.contains(li.id);
+                                        return Card(
+                                          child: ListTile(
+                                            title: Text(li.text, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                            subtitle: Text(li.id),
+                                            trailing: Checkbox(
+                                              value: ck,
+                                              onChanged: (_)=>setState(()=>widget.st.toggleLink(cur.id, li.id)),
+                                            ),
+                                            onTap: () => showInfoModal(context, li, widget.st),
+                                          ),
+                                        );
+                                      },
+                                    ),
                               ),
                             ],
                           ),
                         ),
 
-                        // ======= Info =======
+                        // ===== Info =====
                         ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
@@ -233,11 +217,11 @@ class _InfoModalState extends State<InfoModal> {
                             _info('🔄 Modificado:', _fmt(cur.modifiedAt)),
                             _info('📊 Estado:', cur.status.name),
                             _info('🔢 Cambios:', '${cur.statusChanges}'),
-                            _info('🔗 Relaciones:', '${linkedIds.length}'),
+                            _info('🔗 Relaciones:', '${linked.length}'),
                           ],
                         ),
 
-                        // ======= Tiempo (notas) =======
+                        // ===== Tiempo (notas) =====
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: LayoutBuilder(
