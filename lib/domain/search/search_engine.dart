@@ -5,86 +5,62 @@ import 'package:caosbox/core/utils/tri.dart';
 
 import 'package:caosbox/domain/search/search_models.dart';
 
-Iterable<Item> applySearch(AppState st, List<Item> src, SearchSpec spec) sync* {
+Iterable<Item> applySearch(AppState st, Iterable<Item> src, SearchSpec spec) sync* {
   for (final it in src) {
-    if (_matchAll(st, it, spec)) yield it;
+    if (_evalNode(st, it, spec.root)) yield it;
   }
 }
 
-bool _matchAll(AppState st, Item it, SearchSpec spec) {
-  for (final c in spec.clauses) {
-    if (c is EnumClause) {
-      if (!_matchEnum(it, c)) return false;
-    } else if (c is BoolClause) {
-      if (!_matchBool(st, it, c)) return false;
-    } else if (c is RelationClause) {
-      if (!_matchRelation(st, it, c)) return false;
-    } else if (c is TextClause) {
-      if (!_matchText(st, it, c)) return false;
+bool _evalNode(AppState st, Item it, QueryNode n) {
+  if (n is LeafNode) return _evalClause(st, it, n.clause);
+  if (n is GroupNode) {
+    if (n.children.isEmpty) return true;
+    bool acc = _evalNode(st, it, n.children.first);
+    for (int i = 1; i < n.children.length; i++) {
+      final cur = _evalNode(st, it, n.children[i]);
+      if (n.op == Op.and) {
+        acc = acc && cur;
+        if (!acc) return false; // short-circuit
+      } else {
+        acc = acc || cur;
+        if (acc) return true;   // short-circuit
+      }
     }
+    return acc;
   }
   return true;
 }
 
-bool _matchEnum(Item it, EnumClause c) {
-  String value = '';
-  switch (c.field) {
-    case 'type':
-      value = it.type.name; // 'idea' | 'action'
-      break;
-    case 'status':
-      value = it.status.name.toLowerCase(); // 'normal' | 'completed' | 'archived'
-      break;
-    default:
-      return true; // campo desconocido => no filtra
-  }
-
-  if (c.include.isNotEmpty && !c.include.contains(value)) return false;
-  if (c.exclude.contains(value)) return false;
+bool _evalClause(AppState st, Item it, Clause c) {
+  if (c is TextClause) return _matchText(st, it, c);
+  if (c is FlagClause) return _matchFlag(st, it, c);
   return true;
-}
-
-bool _matchBool(AppState st, Item it, BoolClause c) {
-  if (c.mode == Tri.off) return true;
-  switch (c.field) {
-    case 'hasLinks':
-      final has = st.links(it.id).isNotEmpty;
-      return c.mode == Tri.include ? has : !has;
-  }
-  return true;
-}
-
-bool _matchRelation(AppState st, Item it, RelationClause c) {
-  if (c.mode == Tri.off) return true;
-  // Evita autovínculo
-  if (c.anchorId == it.id) {
-    return c.mode == Tri.exclude; // "incluir relacionado con sí mismo" => falso
-  }
-  final related = st.links(c.anchorId).contains(it.id);
-  return c.mode == Tri.include ? related : !related;
 }
 
 bool _matchText(AppState st, Item it, TextClause c) {
-  // Determina en qué campos mirar
-  final useId     = (c.fields['id'] ?? Tri.off)     != Tri.off;
-  final useText   = (c.fields['content'] ?? Tri.off)!= Tri.off;
-  final useNote   = (c.fields['note'] ?? Tri.off)   != Tri.off;
-
-  if (!useId && !useText && !useNote) return true;
-
-  final id    = it.id.toLowerCase();
-  final body  = it.text.toLowerCase();
-  final note  = st.note(it.id).toLowerCase();
-
-  bool contains(String hay, String needle) {
-    if (needle.isEmpty) return true;
-    return hay.contains(needle);
+  String source;
+  switch (c.element) {
+    case 'id':
+      source = it.id;
+      break;
+    case 'note':
+      source = st.note(it.id);
+      break;
+    default:
+      source = it.text; // 'content'
   }
-  bool prefix(String hay, String needle) {
-    if (needle.isEmpty) return true;
-    return hay.startsWith(needle);
+  final s = source.toLowerCase();
+
+  // presence
+  if (c.presence != Tri.off) {
+    final has = s.trim().isNotEmpty;
+    if (c.presence == Tri.include && !has) return false;
+    if (c.presence == Tri.exclude && has)  return false;
   }
-  bool exact(String hay, String needle) => hay == needle;
+
+  bool contains(String hay, String needle) => needle.isEmpty || hay.contains(needle);
+  bool prefix(String hay, String needle)   => needle.isEmpty || hay.startsWith(needle);
+  bool exact(String hay, String needle)    => hay == needle;
 
   bool Function(String, String) cmp;
   switch (c.match) {
@@ -93,13 +69,41 @@ bool _matchText(AppState st, Item it, TextClause c) {
     case TextMatch.contains: cmp = contains; break;
   }
 
-  for (final tok in c.tokens) {
-    final q = tok.t.toLowerCase();
-    final hit = ((useId   && cmp(id, q)) ||
-                 (useText && cmp(body, q)) ||
-                 (useNote && cmp(note, q)));
-    if (tok.mode == Tri.include && !hit) return false;
-    if (tok.mode == Tri.exclude &&  hit) return false;
+  for (final t in c.tokens) {
+    final q = t.t.toLowerCase();
+    final hit = cmp(s, q);
+    if (t.mode == Tri.include && !hit) return false;
+    if (t.mode == Tri.exclude &&  hit) return false;
+  }
+  return true;
+}
+
+bool _matchFlag(AppState st, Item it, FlagClause c) {
+  switch (c.field) {
+    case 'type': {
+      final v = it.type.name; // 'idea' | 'action'
+      if (c.include.isNotEmpty && !c.include.contains(v)) return false;
+      if (c.exclude.contains(v)) return false;
+      return true;
+    }
+    case 'status': {
+      final v = it.status.name.toLowerCase(); // 'normal'|'completed'|'archived'
+      if (c.include.isNotEmpty && !c.include.contains(v)) return false;
+      if (c.exclude.contains(v)) return false;
+      return true;
+    }
+    case 'hasLinks': {
+      if (c.mode == Tri.off) return true;
+      final has = st.links(it.id).isNotEmpty;
+      return c.mode == Tri.include ? has : !has;
+    }
+    case 'relation': {
+      if (c.mode == Tri.off) return true;
+      final anchor = (c.anchorId ?? '').trim();
+      if (anchor.isEmpty) return true;
+      final isRelated = st.links(anchor).contains(it.id);
+      return c.mode == Tri.include ? isRelated : !isRelated;
+    }
   }
   return true;
 }
