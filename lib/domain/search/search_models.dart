@@ -1,93 +1,109 @@
 import 'package:caosbox/core/utils/tri.dart';
 
-/// ------------------------------------------------------------------
-/// MODELOS DE BÚSQUEDA (modulares)
-/// ------------------------------------------------------------------
-
-/// Cómo comparar texto
 enum TextMatch { contains, prefix, exact }
 
-/// Token con modo tri (include/exclude/off)
 class Token {
   final String t;
-  final Tri mode;
+  final Tri mode; // include | exclude | off
   const Token(this.t, this.mode);
 
   Token clone() => Token(t, mode);
 }
 
-/// Cláusula base
 abstract class Clause {
   const Clause();
   Clause clone();
 }
 
-/// Campos discretos (enum): p.ej. 'type', 'status'
-class EnumClause extends Clause {
-  final String field;           // 'type' | 'status'
-  final Set<String> include;    // valores a incluir
-  final Set<String> exclude;    // valores a excluir
-
-  const EnumClause({
-    required this.field,
-    this.include = const {},
-    this.exclude = const {},
-  });
-
-  @override
-  EnumClause clone() => EnumClause(
-        field: field,
-        include: {...include},
-        exclude: {...exclude},
-      );
-}
-
-/// Texto multicapas (id/content/note) con tokens tri y modo de coincidencia
+/// Bloque de TEXTO para elementos con texto: element ∈ { id, content, note }
 class TextClause extends Clause {
-  final Map<String, Tri> fields;    // 'id' | 'content' | 'note' -> Tri
-  final List<Token> tokens;         // tokens include/exclude
-  final TextMatch match;            // contains/prefix/exact
+  final String element; // 'id' | 'content' | 'note'
+  final Tri presence;   // include => debe tener texto; exclude => debe NO tener; off => ignorar presencia
+  final List<Token> tokens;
+  final TextMatch match;
 
   const TextClause({
-    required this.fields,
-    required this.tokens,
+    required this.element,
+    this.presence = Tri.off,
+    this.tokens = const [],
     this.match = TextMatch.contains,
   });
 
   @override
   TextClause clone() => TextClause(
-        fields: Map<String, Tri>.from(fields),
+        element: element,
+        presence: presence,
         tokens: [for (final t in tokens) t.clone()],
         match: match,
       );
 }
 
-/// Booleanos (sí/no): p.ej. 'hasLinks'
-class BoolClause extends Clause {
-  final String field;   // 'hasLinks'
-  final Tri mode;       // include => true, exclude => false, off => ignora
+/// Bloque de BANDERA/ENUM/RELACIÓN:
+/// - field: 'type' | 'status' => usa include/exclude (sets)
+/// - field: 'hasLinks'        => usa mode (Tri)
+/// - field: 'relation'        => usa mode (Tri) + anchorId (ID literal)
+class FlagClause extends Clause {
+  final String field;           // 'type' | 'status' | 'hasLinks' | 'relation'
+  final Set<String> include;    // para enums
+  final Set<String> exclude;    // para enums
+  final Tri mode;               // para booleanos ('hasLinks'/'relation')
+  final String? anchorId;       // para 'relation'
 
-  const BoolClause({required this.field, required this.mode});
+  const FlagClause({
+    required this.field,
+    this.include = const {},
+    this.exclude = const {},
+    this.mode = Tri.off,
+    this.anchorId,
+  });
 
   @override
-  BoolClause clone() => BoolClause(field: field, mode: mode);
+  FlagClause clone() => FlagClause(
+        field: field,
+        include: {...include},
+        exclude: {...exclude},
+        mode: mode,
+        anchorId: anchorId,
+      );
 }
 
-/// Relación con otro ítem por id (grafo)
-class RelationClause extends Clause {
-  final String anchorId;
-  final Tri mode; // include => relacionado; exclude => NO relacionado
+/// Conectores entre nodos (lineales)
+enum Op { and, or }
 
-  const RelationClause({required this.anchorId, required this.mode});
+abstract class QueryNode {
+  const QueryNode();
+  QueryNode clone();
+}
+
+/// Nodo hoja
+class LeafNode extends QueryNode {
+  final Clause clause;
+  final String? label;
+  const LeafNode({required this.clause, this.label});
 
   @override
-  RelationClause clone() => RelationClause(anchorId: anchorId, mode: mode);
+  LeafNode clone() => LeafNode(clause: clause.clone(), label: label);
 }
 
-/// Conjunto de cláusulas
+/// Nodo grupo (usado para representar combinaciones A AND/OR B)
+class GroupNode extends QueryNode {
+  final Op op;
+  final List<QueryNode> children;
+  final String? label;
+
+  const GroupNode({required this.op, required this.children, this.label});
+
+  @override
+  GroupNode clone() => GroupNode(
+        op: op,
+        children: [for (final c in children) c.clone()],
+        label: label,
+      );
+}
+
 class SearchSpec {
-  final List<Clause> clauses;
-  const SearchSpec({this.clauses = const []});
+  final GroupNode root; // árbol mínimo
+  const SearchSpec({required this.root});
 
-  SearchSpec clone() => SearchSpec(clauses: [for (final c in clauses) c.clone()]);
+  SearchSpec clone() => SearchSpec(root: root.clone() as GroupNode);
 }
