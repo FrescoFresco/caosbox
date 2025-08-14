@@ -1,271 +1,262 @@
 import 'package:flutter/material.dart';
 import 'package:caosbox/app/state/app_state.dart';
-import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/models/item.dart';
+import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/utils/tri.dart';
-
 import 'package:caosbox/domain/search/search_models.dart';
-import 'package:caosbox/domain/search/search_engine.dart';
-import 'package:caosbox/search/search_io.dart';
 
-import 'package:caosbox/ui/widgets/unified_search.dart';
-import 'package:caosbox/ui/widgets/composer_card.dart';
-import 'package:caosbox/ui/screens/info_modal.dart';
-import 'package:caosbox/ui/widgets/content_tile.dart';
-
-enum ContentBlockMode { list, select, link }
-enum CheckboxSide { none, left, right }
-
+/// Bloque de contenido reutilizable para un ItemType (lista + buscador + composer).
 class ContentBlock extends StatefulWidget {
-  final AppState state;
-  final Set<ItemType>? types;
-
-  /// SearchSpec vigente.
-  final SearchSpec spec;
-
-  /// Texto de búsqueda rápida vigente.
-  final String quickQuery;
-
-  /// Notifica cambios en el texto rápido.
-  final ValueChanged<String> onQuickQuery;
-
-  /// Notifica cambios en el SearchSpec (cuando se aplica la hoja avanzada).
-  final ValueChanged<SearchSpec>? onSpecChanged;
-
-  /// (Compat) callback externo para abrir la hoja de filtros. Si no se provee,
-  /// se abre internamente (FiltersSheet).
-  final VoidCallback? onOpenFilters;
-
-  final bool showComposer;            // añadir bloques (sólo listas B1/B2)
-  final ContentBlockMode mode;
-  final String? anchorId;
-  final CheckboxSide checkboxSide;
-  final String? selectedId;
-  final ValueChanged<String?>? onSelect;
-
-  const ContentBlock({
-    super.key,
-    required this.state,
-    this.types,
-    required this.spec,
-    required this.quickQuery,
-    required this.onQuickQuery,
-    this.onSpecChanged,
-    this.onOpenFilters,               // ← reintroducido (opcional)
-    this.showComposer = false,
-    this.mode = ContentBlockMode.list,
-    this.anchorId,
-    this.checkboxSide = CheckboxSide.none,
-    this.selectedId,
-    this.onSelect,
-  });
+  final AppState st;
+  final ItemType type;
+  const ContentBlock({super.key, required this.st, required this.type});
 
   @override
   State<ContentBlock> createState() => _ContentBlockState();
 }
 
-class _ContentBlockState extends State<ContentBlock> with AutomaticKeepAliveClientMixin {
-  late final TextEditingController _q;
-  late final TextEditingController _composer;
-
-  // Copia local del spec (para poder usar ContentBlock sin onSpecChanged).
-  late SearchSpec _spec;
+class _ContentBlockState extends State<ContentBlock> {
+  final _composer = TextEditingController();
+  final _quick = TextEditingController();
+  SearchSpec _spec = const SearchSpec(root: GroupNode(op: Op.and, children: []));
 
   @override
-  void initState() {
-    super.initState();
-    _q = TextEditingController(text: widget.quickQuery)..addListener(() => widget.onQuickQuery(_q.text));
-    _composer = TextEditingController();
-    _spec = widget.spec;
+  void dispose() { _composer.dispose(); _quick.dispose(); super.dispose(); }
+
+  void _add() {
+    final v = _composer.text.trim();
+    if (v.isEmpty) return;
+    widget.st.add(widget.type, v);
+    _composer.clear();
+    setState(() {});
   }
 
-  @override
-  void didUpdateWidget(covariant ContentBlock oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.quickQuery != widget.quickQuery && _q.text != widget.quickQuery) {
-      _q.text = widget.quickQuery;
-      _q.selection = TextSelection.collapsed(offset: _q.text.length);
+  List<Item> _apply(AppState st, Iterable<Item> base) {
+    // Aplica spec + quick (OR en id|content|note)
+    final q = _quick.text.trim();
+    SearchSpec spec = _spec;
+    if (q.isNotEmpty) {
+      final tokens = [Token(q, Tri.include)];
+      final orGroup = GroupNode(
+        op: Op.or,
+        children: [
+          LeafNode(clause: TextClause(element: 'id', tokens: tokens)),
+          LeafNode(clause: TextClause(element: 'content', tokens: tokens)),
+          LeafNode(clause: TextClause(element: 'note', tokens: tokens)),
+        ],
+      );
+      spec = SearchSpec(root: GroupNode(op: Op.and, children: [spec.root, orGroup]));
     }
-    if (oldWidget.spec != widget.spec) {
-      _spec = widget.spec;
+
+    bool evalNode(Item it, QueryNode n) {
+      if (n is LeafNode) return _evalClause(st, it, n.clause);
+      if (n is GroupNode) {
+        if (n.children.isEmpty) return true;
+        bool acc = evalNode(it, n.children.first);
+        for (int i = 1; i < n.children.length; i++) {
+          final cur = evalNode(it, n.children[i]);
+          if (n.op == Op.and) {
+            acc = acc && cur; if (!acc) return false;
+          } else {
+            acc = acc || cur; if (acc) return true;
+          }
+        }
+        return acc;
+      }
+      return true;
     }
-  }
 
-  @override
-  void dispose() { _q.dispose(); _composer.dispose(); super.dispose(); }
-  @override bool get wantKeepAlive => true;
-
-  List<Item> _sourceByTypes() {
-    if (widget.types == null) return widget.state.all;
     final out = <Item>[];
-    for (final t in widget.types!) { out.addAll(widget.state.items(t)); }
+    for (final it in base) {
+      if (evalNode(it, spec.root)) out.add(it);
+    }
     return out;
   }
 
-  SearchSpec _mergeQuick(SearchSpec base, String q) {
-    final parts = q.trim().isEmpty ? <String>[] : q.trim().split(RegExp(r'\s+'));
-    final tokens = parts.map((p) => p.startsWith('-') && p.length > 1 ? Token(p.substring(1), Tri.exclude) : Token(p, Tri.include)).toList();
-    if (tokens.isEmpty) return base;
-    final quick = TextClause(fields: {'id':Tri.include,'content':Tri.include,'note':Tri.include}, tokens: tokens);
-    return SearchSpec(clauses: [...base.clauses, quick]);
+  bool _evalClause(AppState st, Item it, Clause c) {
+    if (c is TextClause) {
+      final src = switch (c.element) {
+        'id' => it.id,
+        'note' => st.note(it.id),
+        _ => it.text,
+      }.toLowerCase();
+
+      if (c.presence != Tri.off) {
+        final has = src.trim().isNotEmpty;
+        if (c.presence == Tri.include && !has) return false;
+        if (c.presence == Tri.exclude && has) return false;
+      }
+
+      bool contains(String a, String b) => b.isEmpty || a.contains(b);
+      bool prefix(String a, String b) => b.isEmpty || a.startsWith(b);
+      bool exact(String a, String b) => a == b;
+      final cmp = switch (c.match) { TextMatch.prefix => prefix, TextMatch.exact => exact, _ => contains };
+
+      for (final t in c.tokens) {
+        final hit = cmp(src, t.t.toLowerCase());
+        if (t.mode == Tri.include && !hit) return false;
+        if (t.mode == Tri.exclude && hit) return false;
+      }
+      return true;
+    } else if (c is FlagClause) {
+      switch (c.field) {
+        case 'type':
+          final v = it.type.name;
+          if (c.include.isNotEmpty && !c.include.contains(v)) return false;
+          if (c.exclude.contains(v)) return false;
+          return true;
+        case 'status':
+          final v = it.status.name.toLowerCase();
+          if (c.include.isNotEmpty && !c.include.contains(v)) return false;
+          if (c.exclude.contains(v)) return false;
+          return true;
+        case 'hasLinks':
+          if (c.mode == Tri.off) return true;
+          final has = st.links(it.id).isNotEmpty;
+          return c.mode == Tri.include ? has : !has;
+        case 'relation':
+          if (c.mode == Tri.off) return true;
+          final anchor = (c.anchorId ?? '').trim();
+          if (anchor.isEmpty) return true;
+          final isRel = st.links(anchor).contains(it.id);
+          return c.mode == Tri.include ? isRel : !isRel;
+      }
+    }
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return AnimatedBuilder(
-      animation: widget.state,
-      builder: (_, __) {
-        final srcAll    = _sourceByTypes();
-        final effective = _mergeQuick(_spec, _q.text);
-        final items     = List<Item>.from(applySearch(widget.state, srcAll, effective), growable: false);
+    final st = widget.st;
+    final base = st.items(widget.type);
+    final items = _apply(st, base);
 
-        final onExportData = () {
-          final json = exportDataJson(widget.state);
-          _showLong(context, 'Datos (JSON)', json);
-        };
-        final onImportData = () async {
-          final ctrl = TextEditingController();
-          final ok = await showDialog<bool>(
-            context: context,
-            builder: (dctx) => AlertDialog(
-              title: const Text('Importar datos (reemplaza)'),
-              content: TextField(controller: ctrl, maxLines: 14, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Pega aquí el JSON de datos…')),
-              actions: [
-                TextButton(onPressed: ()=>Navigator.pop(dctx,false), child: const Text('Cancelar')),
-                FilledButton(onPressed: ()=>Navigator.pop(dctx,true), child: const Text('Importar')),
-              ],
+    return Column(children: [
+      Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _composer,
+            decoration: InputDecoration(
+              hintText: widget.type == ItemType.idea ? 'Escribe tu idea…' : 'Describe la acción…',
+              border: const OutlineInputBorder(),
+              isDense: true,
             ),
-          );
-          if (ok == true) {
-            try { importDataJsonReplace(widget.state, ctrl.text); if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Datos importados'))); }
-            catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'))); }
-          }
-        };
-
-        final showComposer = widget.showComposer && widget.mode == ContentBlockMode.list;
-        final showDataIO   = widget.mode == ContentBlockMode.list;
-
-        return Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [
-            // Buscador unificado (campo + botón que abre FiltersSheet o callback externo)
-            UnifiedSearch(
-              state: widget.state,
-              controller: _q,
-              spec: _spec,
-              onSpecChanged: (s){
-                setState(()=> _spec = s);
-                widget.onSpecChanged?.call(s);
-              },
-              openFilters: widget.onOpenFilters,   // ← si viene de fuera, úsalo
-              onExportData: showDataIO ? onExportData : null,
-              onImportData: showDataIO ? onImportData : null,
+            minLines: 1, maxLines: 4,
+          ),
+        ),
+        const SizedBox(width: 8),
+        FilledButton(onPressed: _add, child: const Text('Agregar')),
+      ]),
+      const SizedBox(height: 12),
+      Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _quick,
+            decoration: const InputDecoration(
+              hintText: 'Buscar…',
+              prefixIcon: Icon(Icons.search),
+              isDense: true,
+              border: OutlineInputBorder(),
             ),
-
-            if (showComposer) ...[
-              const SizedBox(height: 12),
-              ComposerCard(
-                icon: _composerIcon(),
-                hint: _composerHint(),
-                controller: _composer,
-                onAdd: () {
-                  final t = _singleTypeOrNull();
-                  if (t != null) { widget.state.add(t, _composer.text); _composer.clear(); }
-                },
-                onCancel: () { _composer.clear(); },
+            onChanged: (_)=>setState((){}),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.tune),
+          onPressed: () async {
+            // Abre tu UI real de filtros. Aquí dejamos un spec vacío por defecto:
+            final s = await showDialog<SearchSpec>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Filtros avanzados'),
+                content: const Text('Inserta aquí tu modal de filtros.'),
+                actions: [
+                  TextButton(onPressed: ()=>Navigator.pop(ctx), child: const Text('Cancelar')),
+                  FilledButton(onPressed: ()=>Navigator.pop(ctx, const SearchSpec(root: GroupNode(op: Op.and, children: []))), child: const Text('OK')),
+                ],
               ),
-            ],
-            const SizedBox(height: 8),
-            Expanded(child: _buildList(items)),
-          ]),
-        );
-      },
+            );
+            if (s != null) setState(()=>_spec = s);
+          },
+        ),
+      ]),
+      const SizedBox(height: 8),
+      Expanded(
+        child: ListView.builder(
+          itemCount: items.length,
+          itemBuilder: (_, i) {
+            final it = items[i];
+            return Card(
+              child: ListTile(
+                title: Text(it.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                subtitle: Text('${it.id} • ${it.status.name}'),
+                trailing: st.links(it.id).isNotEmpty ? const Icon(Icons.link, size: 18, color: Colors.blue) : null,
+                onLongPress: ()=>_showInfo(context, it, st),
+              ),
+            );
+          },
+        ),
+      ),
+    ]);
+  }
+
+  void _showInfo(BuildContext context, Item it, AppState st) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _InfoModalMini(it: it, st: st),
     );
   }
+}
 
-  Widget _buildList(List<Item> items) {
-    final cbSide = switch (widget.checkboxSide) {
-      CheckboxSide.left  => TileCheckboxSide.left,
-      CheckboxSide.right => TileCheckboxSide.right,
-      _ => TileCheckboxSide.none,
-    };
+class _InfoModalMini extends StatelessWidget {
+  final Item it;
+  final AppState st;
+  const _InfoModalMini({required this.it, required this.st});
 
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (_, i) {
-        final it = items[i];
-        if (widget.mode == ContentBlockMode.link && widget.anchorId != null && it.id == widget.anchorId) {
-          return const SizedBox.shrink();
-        }
-
-        final hasLinks = widget.state.links(it.id).isNotEmpty;
-        final Color statusColor = switch (it.status) {
-          ItemStatus.completed => Colors.green,
-          ItemStatus.archived  => Colors.grey,
-          _ => Colors.transparent,
-        };
-        final IconData typeIcon = it.type == ItemType.idea ? Icons.lightbulb : Icons.assignment;
-
-        bool checked = false;
-        VoidCallback? onToggleCheck;
-
-        if (widget.mode == ContentBlockMode.select) {
-          checked = (widget.selectedId == it.id);
-          onToggleCheck = () => widget.onSelect?.call(checked ? null : it.id);
-        } else if (widget.mode == ContentBlockMode.link) {
-          final anchor = widget.anchorId;
-          checked = anchor != null && widget.state.links(anchor).contains(it.id);
-          onToggleCheck = () { if (anchor != null) widget.state.toggleLink(anchor, it.id); };
-        }
-
-        Future<void> _swipeStartToEnd() async {
-          final s = it.status; final next = s == ItemStatus.completed ? ItemStatus.normal : ItemStatus.completed;
-          widget.state.setStatus(it.id, next);
-        }
-        Future<void> _swipeEndToStart() async {
-          final s = it.status; final next = s == ItemStatus.archived ? ItemStatus.normal : ItemStatus.archived;
-          widget.state.setStatus(it.id, next);
-        }
-
-        return ContentTile(
-          key: ValueKey('ct_${widget.mode}_${widget.anchorId ?? "none"}_${it.id}_${it.status.name}'),
-          id: it.id,
-          text: it.text,
-          typeIcon: typeIcon,
-          hasLinks: hasLinks,
-          statusColor: statusColor,
-          checkboxSide: widget.mode == ContentBlockMode.list ? TileCheckboxSide.none : cbSide,
-          checked: checked,
-          onToggleCheck: onToggleCheck,
-          onLongPress: () => showInfoModal(context, it, widget.state),
-          onSwipeStartToEnd: _swipeStartToEnd,
-          onSwipeEndToStart: _swipeEndToStart,
-        );
-      },
+  @override
+  Widget build(BuildContext context) {
+    final linked = st.all.where((i)=>st.links(it.id).contains(i.id)).toList();
+    return FractionallySizedBox(
+      heightFactor: 0.85,
+      child: Material(
+        child: Column(
+          children: [
+            ListTile(
+              title: Text('${it.id} • ${it.status.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(it.text),
+              trailing: IconButton(icon: const Icon(Icons.close), onPressed: ()=>Navigator.pop(context)),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text('Relacionado', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  if (linked.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('Sin relaciones', style: TextStyle(color: Colors.grey)),
+                    )
+                  else
+                    ...linked.map((li)=>ListTile(
+                      title: Text(li.text, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text(li.id),
+                      trailing: Checkbox(
+                        value: st.links(it.id).contains(li.id),
+                        onChanged: (_)=>st.toggleLink(it.id, li.id),
+                      ),
+                    )),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-  }
-
-  String _composerHint() {
-    final t = _singleTypeOrNull();
-    if (t == ItemType.idea) return 'Escribe tu idea...';
-    if (t == ItemType.action) return 'Describe la acción...';
-    return 'Añadir...';
-  }
-  IconData _composerIcon() {
-    final t = _singleTypeOrNull();
-    if (t == ItemType.idea) return Icons.lightbulb;
-    if (t == ItemType.action) return Icons.assignment;
-    return Icons.add;
-  }
-  ItemType? _singleTypeOrNull() {
-    final ts = widget.types; if (ts == null || ts.length != 1) return null; return ts.first;
-  }
-
-  void _showLong(BuildContext context, String title, String text) {
-    showDialog(context: context, builder: (ctx) => AlertDialog(
-      title: Text(title), content: SizedBox(width: 600, child: SelectableText(text)),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar'))],
-    ));
   }
 }
