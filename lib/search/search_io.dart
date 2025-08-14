@@ -5,7 +5,7 @@ import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/core/utils/tri.dart';
 import 'package:caosbox/domain/search/search_models.dart';
 
-/// ---------------------- DATOS (items) ----------------------
+/// ====================== DATOS (items) ======================
 
 String exportDataJson(AppState st) {
   final data = {
@@ -14,7 +14,7 @@ String exportDataJson(AppState st) {
     'meta': {
       'counters': {
         'idea': st.counters[ItemType.idea] ?? 0,
-        'action': st.counters[ItemType.action] ?? 0
+        'action': st.counters[ItemType.action] ?? 0,
       },
       'generatedAt': DateTime.now().toUtc().toIso8601String(),
     },
@@ -46,10 +46,9 @@ List<List<String>> _linksPairs(AppState st) {
     for (final b in st.links(it.id)) {
       final a = it.id;
       if (a == b) continue;
-      final x = a.compareTo(b) <= 0 ? '$a|$b' : '$b|$a';
-      if (seen.add(x)) {
-        final pair = a.compareTo(b) <= 0 ? [a, b] : [b, a];
-        out.add(pair);
+      final key = a.compareTo(b) <= 0 ? '$a|$b' : '$b|$a';
+      if (seen.add(key)) {
+        out.add(a.compareTo(b) <= 0 ? [a, b] : [b, a]);
       }
     }
   }
@@ -61,13 +60,14 @@ void importDataJsonReplace(AppState st, String text) {
   if (m is! Map || m['kind'] != 'caosbox-data') {
     throw 'Documento inválido (kind != caosbox-data)';
   }
+
   final items = <Item>[];
   for (final e in (m['items'] as List? ?? [])) {
     final type = (e['type'] == 'idea') ? ItemType.idea : ItemType.action;
     final status = switch (('${e['status']}'.toLowerCase())) {
       'completed' => ItemStatus.completed,
       'archived'  => ItemStatus.archived,
-      _           => ItemStatus.normal
+      _           => ItemStatus.normal,
     };
     items.add(Item(
       e['id'],
@@ -79,17 +79,16 @@ void importDataJsonReplace(AppState st, String text) {
       statusChanges: e['statusChanges'] is int ? e['statusChanges'] : 0,
     ));
   }
+
   final counters = {
     ItemType.idea: (m['meta']?['counters']?['idea'] ?? 0) as int,
     ItemType.action: (m['meta']?['counters']?['action'] ?? 0) as int,
   };
 
-  // reconstruir adyacencia desde pares
   final links = <String, Set<String>>{};
   for (final p in (m['links'] as List? ?? [])) {
     if (p is List && p.length == 2) {
-      final a = '${p[0]}';
-      final b = '${p[1]}';
+      final a = '${p[0]}', b = '${p[1]}';
       if (a == b) continue;
       links.putIfAbsent(a, () => <String>{}).add(b);
       links.putIfAbsent(b, () => <String>{}).add(a);
@@ -105,48 +104,56 @@ void importDataJsonReplace(AppState st, String text) {
   st.replaceAll(items: items, counters: counters, links: links, notes: notes);
 }
 
-/// ---------------------- QUERY (búsqueda) ----------------------
+/// ====================== CONSULTA (v3) ======================
 
 String exportQueryJson(SearchSpec s) {
-  Map<String, dynamic> clauseToMap(Clause c) {
-    if (c is EnumClause) {
+  Map<String, dynamic> nodeToMap(QueryNode n) {
+    if (n is LeafNode) {
+      return {'clause': clauseToMap(n.clause), if (n.label != null) 'label': n.label};
+    }
+    if (n is GroupNode) {
       return {
-        'type': 'enum',
-        'field': c.field,
-        'include': c.include.toList(),
-        'exclude': c.exclude.toList()
+        'op': n.op == Op.and ? 'AND' : 'OR',
+        'children': [for (final c in n.children) nodeToMap(c)],
+        if (n.label != null) 'label': n.label,
       };
-    } else if (c is TextClause) {
+    }
+    return {};
+  }
+
+  Map<String, dynamic> clauseToMap(Clause c) {
+    if (c is TextClause) {
       return {
         'type': 'text',
-        'fields': c.fields.map((k, v) => MapEntry(k, v.name)),
+        'element': c.element,
+        'presence': c.presence.name, // include|exclude|off
         'tokens': [for (final t in c.tokens) {'t': t.t, 'mode': t.mode.name}],
         'match': switch (c.match) {
           TextMatch.prefix => 'prefix',
           TextMatch.exact => 'exact',
-          _ => 'contains'
+          _ => 'contains',
         },
       };
-    } else if (c is BoolClause) {
-      return {
-        'type': 'bool',
-        'field': c.field,
-        'mode': c.mode.name,
-      };
-    } else if (c is RelationClause) {
-      return {
-        'type': 'relation',
-        'anchorId': c.anchorId,
-        'mode': c.mode.name,
-      };
+    } else if (c is FlagClause) {
+      final m = <String, dynamic>{'type': 'flag', 'field': c.field};
+      if (c.field == 'type' || c.field == 'status') {
+        m['include'] = c.include.toList();
+        m['exclude'] = c.exclude.toList();
+      } else if (c.field == 'hasLinks') {
+        m['mode'] = c.mode.name;
+      } else if (c.field == 'relation') {
+        m['mode'] = c.mode.name;
+        m['anchorId'] = c.anchorId ?? '';
+      }
+      return m;
     }
     return {};
   }
 
   final obj = {
     'kind': 'caosbox-query',
-    'version': 2,
-    'clauses': [for (final c in s.clauses) clauseToMap(c)],
+    'version': 3,
+    'root': nodeToMap(s.root),
   };
   return const JsonEncoder.withIndent('  ').convert(obj);
 }
@@ -156,64 +163,84 @@ SearchSpec importQueryJson(String text) {
   if (m is! Map || m['kind'] != 'caosbox-query') {
     throw 'Documento inválido (kind != caosbox-query)';
   }
-  final clauses = <Clause>[];
+  final v = (m['version'] ?? 2) as int;
+  if (v == 3) {
+    return SearchSpec(root: _mapToNode(m['root']) as GroupNode);
+  }
+  // Migración v2 (lista lineal) -> v3 (AND root con hojas)
+  final clauses = (m['clauses'] as List? ?? []).map(_mapToClause).toList();
+  final children = [for (final c in clauses) LeafNode(clause: c)];
+  return SearchSpec(root: GroupNode(op: Op.and, children: children));
+}
 
-  for (final e in (m['clauses'] as List? ?? [])) {
-    final t = '${e['type']}';
-    if (t == 'enum') {
-      clauses.add(EnumClause(
-        field: '${e['field']}',
-        include: {...(e['include'] as List? ?? []).map((x) => '$x')},
-        exclude: {...(e['exclude'] as List? ?? []).map((x) => '$x')},
-      ));
-    } else if (t == 'text') {
-      final fields = <String, Tri>{};
-      final fm = (e['fields'] as Map? ?? {});
-      for (final k in fm.keys) {
-        final v = '${fm[k]}';
-        fields['$k'] = switch (v) {
-          'include' => Tri.include,
-          'exclude' => Tri.exclude,
-          _ => Tri.off
-        };
-      }
-      final toks = <Token>[
-        for (final t in (e['tokens'] as List? ?? []))
-          Token(
-            '${t['t']}',
-            switch ('${t['mode']}') {
-              'exclude' => Tri.exclude,
-              'include' => Tri.include,
-              _ => Tri.off
-            },
-          )
-      ];
-      final match = switch ('${e['match']}') {
+QueryNode _mapToNode(dynamic n) {
+  if (n is Map && n.containsKey('clause')) {
+    return LeafNode(
+      clause: _mapToClause(n['clause']),
+      label: n['label'] is String ? n['label'] : null,
+    );
+  }
+  if (n is Map) {
+    final op = (n['op'] == 'OR') ? Op.or : Op.and;
+    final kids = <QueryNode>[
+      for (final c in (n['children'] as List? ?? [])) _mapToNode(c),
+    ];
+    return GroupNode(op: op, children: kids, label: n['label'] is String ? n['label'] : null);
+  }
+  // fallback vacío
+  return GroupNode(op: Op.and, children: const []);
+}
+
+Clause _mapToClause(dynamic c) {
+  if (c is! Map) return const FlagClause(field: 'type');
+  final type = '${c['type']}';
+  if (type == 'text') {
+    return TextClause(
+      element: '${c['element'] ?? 'content'}',
+      presence: switch ('${c['presence'] ?? 'off'}') {
+        'include' => Tri.include,
+        'exclude' => Tri.exclude,
+        _ => Tri.off
+      },
+      tokens: [
+        for (final t in (c['tokens'] as List? ?? []))
+          Token('${t['t']}', switch ('${t['mode']}') {
+            'exclude' => Tri.exclude,
+            'include' => Tri.include,
+            _ => Tri.off
+          })
+      ],
+      match: switch ('${c['match'] ?? 'contains'}') {
         'prefix' => TextMatch.prefix,
         'exact' => TextMatch.exact,
-        _ => TextMatch.contains,
-      };
-      clauses.add(TextClause(fields: fields, tokens: toks, match: match));
-    } else if (t == 'bool') {
-      clauses.add(BoolClause(
-        field: '${e['field']}',
-        mode: switch ('${e['mode']}') {
+        _ => TextMatch.contains
+      },
+    );
+  } else {
+    final field = '${c['field'] ?? 'type'}';
+    if (field == 'type' || field == 'status') {
+      return FlagClause(
+        field: field,
+        include: {...(c['include'] as List? ?? []).map((e) => '$e')},
+        exclude: {...(c['exclude'] as List? ?? []).map((e) => '$e')},
+      );
+    } else if (field == 'hasLinks') {
+      return FlagClause(field: field, mode: switch ('${c['mode']}') {
+        'include' => Tri.include,
+        'exclude' => Tri.exclude,
+        _ => Tri.off
+      });
+    } else {
+      // relation
+      return FlagClause(
+        field: 'relation',
+        mode: switch ('${c['mode']}') {
           'include' => Tri.include,
           'exclude' => Tri.exclude,
           _ => Tri.off
         },
-      ));
-    } else if (t == 'relation') {
-      clauses.add(RelationClause(
-        anchorId: '${e['anchorId']}',
-        mode: switch ('${e['mode']}') {
-          'include' => Tri.include,
-          'exclude' => Tri.exclude,
-          _ => Tri.off
-        },
-      ));
+        anchorId: c['anchorId'] != null ? '${c['anchorId']}' : null,
+      );
     }
   }
-
-  return SearchSpec(clauses: clauses);
 }
