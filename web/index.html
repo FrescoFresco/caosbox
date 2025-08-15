@@ -17,11 +17,17 @@
 <body>
   <div id="boot">
     <div class="err">
-      <b>Iniciando CaosBox…</b><br><small>Si ves esto más de unos segundos, aparecerá el motivo del error aquí.</small>
+      <b>Iniciando CaosBox…</b><br>
+      <small>Si ves esto más de unos segundos, aparecerá el motivo del error aquí.</small>
     </div>
   </div>
 
+  <!-- Carga oficial: flutter.js + flutter_bootstrap.js.
+       El bootstrap define _flutter.buildConfig y lanza la app automáticamente. -->
   <script src="flutter.js" defer></script>
+  <script src="flutter_bootstrap.js" async></script>
+
+  <!-- Overlay de errores por si algo rompe antes/durante el arranque -->
   <script>
     function showErr(msg) {
       var el = document.getElementById('boot');
@@ -32,20 +38,9 @@
     }
     window.addEventListener('error', (e) => showErr(e?.message || e?.error || e));
     window.addEventListener('unhandledrejection', (e) => showErr(e?.reason || e));
-
-    // Modo compat: loadEntrypoint (no requiere _flutter.buildConfig).
-    // Desactivamos Service Worker para evitar pantallas en blanco por SW cacheado.
-    window.addEventListener('load', function () {
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: { serviceWorkerVersion: null },
-        onEntrypointLoaded: function (engineInitializer) {
-          engineInitializer.initializeEngine().then(function (appRunner) {
-            return appRunner.runApp();
-          }).then(function () {
-            var el = document.getElementById('boot'); if (el) el.remove();
-          }).catch(showErr);
-        }
-      }).catch(showErr);
+    // Cuando Flutter arranca, elimina el overlay
+    document.addEventListener('flutter-first-frame', () => {
+      const el = document.getElementById('boot'); if (el) el.remove();
     });
   </script>
 </body>
