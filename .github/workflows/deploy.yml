@@ -1,23 +1,48 @@
-name: Deploy Web
+name: Deploy Flutter Web to GitHub Pages
+
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
           flutter-version: '3.32.8'
-      - name: Pub get
+
+      - name: Flutter Pub Get
         run: flutter pub get
+
       - name: Build web
         run: flutter build web --release --base-href=/
+
+      - name: Add CNAME and .nojekyll
+        run: |
+          echo "caosbox.com" > build/web/CNAME
+          touch build/web/.nojekyll
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
           cname: caosbox.com
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
