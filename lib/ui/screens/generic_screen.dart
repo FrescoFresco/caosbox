@@ -4,7 +4,6 @@ import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/config/blocks.dart';
 import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
-import 'package:caosbox/ui/widgets/composer_card.dart';
 import 'package:caosbox/ui/widgets/chips_panel.dart';
 import 'package:caosbox/ui/widgets/item_card.dart';
 import 'package:caosbox/ui/screens/info_modal.dart';
@@ -16,13 +15,13 @@ class GenericScreen extends StatefulWidget {
 }
 
 class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveClientMixin {
-  late final TextEditingController _compose; late final TextEditingController _quick;
+  late final TextEditingController _quick;
   final _filters=FilterSet(); final _expanded=<String>{};
   void _r()=>setState((){});
   @override bool get wantKeepAlive=>true;
 
-  @override void initState(){super.initState(); _compose=TextEditingController(); _quick=TextEditingController();}
-  @override void dispose(){_compose.dispose(); _quick.dispose(); _filters.dispose(); super.dispose();}
+  @override void initState(){super.initState(); _quick=TextEditingController();}
+  @override void dispose(){_quick.dispose(); _filters.dispose(); super.dispose();}
 
   void _openFilters(){
     showModalBottomSheet(context: context, isScrollControlled: true, useSafeArea: true, builder: (_)=>Padding(
@@ -37,8 +36,7 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
 
   @override Widget build(BuildContext ctx){
     super.build(ctx);
-    final t=widget.block.type!; final cfg=widget.block.cfg!;
-    final items=widget.st.items(t);
+    final t=widget.block.type!; final items=widget.st.items(t);
 
     List<Item> filtered=items.where((it){
       final q=_quick.text.trim().toLowerCase(); if(q.isEmpty) return true;
@@ -49,10 +47,6 @@ class _GenericScreenState extends State<GenericScreen> with AutomaticKeepAliveCl
     filtered = FilterEngine.apply(filtered, widget.st, _filters);
 
     return Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-      ComposerCard(icon: cfg.icon, hint: cfg.hint, c: _compose, onAdd: (){
-        widget.st.add(t, _compose.text); _compose.clear(); _r();
-      }, onCancel: (){ _compose.clear(); _r(); }),
-      const SizedBox(height:12),
       cx.SearchBar(controller:_quick, onChanged: (_)=>_r(), onOpenFilters: _openFilters, hint:'Buscar…'),
       const SizedBox(height:8),
       Expanded(child: ListView.builder(itemCount: filtered.length, itemBuilder: (_,i){
