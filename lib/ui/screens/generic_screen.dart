@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:caosbox/app/state/app_state.dart';
-import 'package:caosbox/core/models/enums.dart';
 import 'package:caosbox/core/models/item.dart';
 import 'package:caosbox/config/blocks.dart';
 import 'package:caosbox/ui/widgets/search_bar.dart' as cx;
