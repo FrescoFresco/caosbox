@@ -9,7 +9,7 @@ void main() {
   runZonedGuarded(() {
     runApp(const CaosApp());
   }, (e, st) {
-    // Verás el error en la consola del navegador (F12)
+    // En web, verás el error en la consola del navegador (F12)
     // ignore: avoid_print
     print('Zoned error: $e\n$st');
   });
