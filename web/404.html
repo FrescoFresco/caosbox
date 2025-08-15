@@ -6,15 +6,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CaosBox • beta</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    html,body{height:100%;margin:0}
+    #boot{display:flex;align-items:center;justify-content:center;height:100%;font-family:sans-serif;color:#222}
+    #boot small{opacity:.6}
+    #boot .err{max-width:720px;padding:16px;border:1px solid #eee;border-radius:8px;background:#fff}
+    #boot .err pre{white-space:pre-wrap;word-break:break-word}
+  </style>
 </head>
 <body>
+  <div id="boot">
+    <div class="err">
+      <b>Iniciando CaosBox…</b><br><small>Si ves esto más de unos segundos, aparecerá el motivo del error aquí.</small>
+    </div>
+  </div>
+
   <script src="flutter.js" defer></script>
   <script>
-    // Evita SW viejo y pantallas en blanco
+    function showErr(msg) {
+      var el = document.getElementById('boot');
+      if (!el) { el = document.createElement('div'); el.id = 'boot'; document.body.appendChild(el); }
+      el.innerHTML =
+        '<div class="err"><b>Error arrancando la app</b><br><small>Detalles:</small><pre>' +
+        String(msg || 'desconocido') + '</pre></div>';
+    }
+    window.addEventListener('error', (e) => showErr(e?.message || e?.error || e));
+    window.addEventListener('unhandledrejection', (e) => showErr(e?.reason || e));
     window.addEventListener('load', function () {
       _flutter.loader.load({ serviceWorker: { serviceWorkerVersion: null } })
-        .then(function (engineInitializer) { return engineInitializer.initializeEngine(); })
-        .then(function (appRunner) { return appRunner.runApp(); });
+        .then((engineInitializer) => engineInitializer.initializeEngine())
+        .then((appRunner) => appRunner.runApp())
+        .then(() => { const el = document.getElementById('boot'); if (el) el.remove(); })
+        .catch((e) => showErr(e));
     });
   </script>
 </body>
