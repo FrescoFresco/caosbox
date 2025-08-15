@@ -9,10 +9,10 @@ class Item {
   final DateTime modifiedAt;
   final int statusChanges;
 
-  Item({
-    required this.id,
-    required this.text,
-    required this.type,
+  Item(
+    this.id,
+    this.text,
+    this.type, {
     this.status = ItemStatus.normal,
     DateTime? createdAt,
     DateTime? modifiedAt,
@@ -21,33 +21,19 @@ class Item {
         modifiedAt = modifiedAt ?? DateTime.now();
 
   Item copyWith({
-    String? text,
     ItemStatus? status,
-    DateTime? createdAt,
+    String? text,
     DateTime? modifiedAt,
     int? statusChanges,
   }) {
     return Item(
-      id: id,
-      text: text ?? this.text,
-      type: type,
+      id,
+      text ?? this.text,
+      type,
       status: status ?? this.status,
-      createdAt: createdAt ?? this.createdAt,
+      createdAt: createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
       statusChanges: statusChanges ?? this.statusChanges,
-    );
-  }
-
-  Item copyWithStatus(ItemStatus s) {
-    final changed = s != status;
-    return Item(
-      id: id,
-      text: text,
-      type: type,
-      status: s,
-      createdAt: createdAt,
-      modifiedAt: changed ? DateTime.now() : modifiedAt,
-      statusChanges: changed ? statusChanges + 1 : statusChanges,
     );
   }
 }
