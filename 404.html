@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base href="$FLUTTER_BASE_HREF">
+  <base href="/">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CaosBox • beta</title>
@@ -28,16 +28,24 @@
       if (!el) { el = document.createElement('div'); el.id = 'boot'; document.body.appendChild(el); }
       el.innerHTML =
         '<div class="err"><b>Error arrancando la app</b><br><small>Detalles:</small><pre>' +
-        String(msg || 'desconocido') + '</pre></div>';
+        String((msg && (msg.stack || msg.message)) || msg || 'desconocido') + '</pre></div>';
     }
     window.addEventListener('error', (e) => showErr(e?.message || e?.error || e));
     window.addEventListener('unhandledrejection', (e) => showErr(e?.reason || e));
+
+    // Modo compat: loadEntrypoint (no requiere _flutter.buildConfig).
+    // Desactivamos Service Worker para evitar pantallas en blanco por SW cacheado.
     window.addEventListener('load', function () {
-      _flutter.loader.load({ serviceWorker: { serviceWorkerVersion: null } })
-        .then((engineInitializer) => engineInitializer.initializeEngine())
-        .then((appRunner) => appRunner.runApp())
-        .then(() => { const el = document.getElementById('boot'); if (el) el.remove(); })
-        .catch((e) => showErr(e));
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: { serviceWorkerVersion: null },
+        onEntrypointLoaded: function (engineInitializer) {
+          engineInitializer.initializeEngine().then(function (appRunner) {
+            return appRunner.runApp();
+          }).then(function () {
+            var el = document.getElementById('boot'); if (el) el.remove();
+          }).catch(showErr);
+        }
+      }).catch(showErr);
     });
   </script>
 </body>
