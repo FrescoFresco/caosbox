@@ -10,7 +10,7 @@
 <body>
   <script src="flutter.js" defer></script>
   <script>
-    // Evita SW viejo y pantallas en blanco
+    // Loader moderno; desactiva SW viejo para evitar pantallas en blanco
     window.addEventListener('load', function () {
       _flutter.loader.load({ serviceWorker: { serviceWorkerVersion: null } })
         .then(function (engineInitializer) { return engineInitializer.initializeEngine(); })
