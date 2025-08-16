@@ -1,34 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'firebase_options.dart';
-
-// UI lista de Firebase
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
 
-// TODO: importa tu app real
-import 'app.dart'; // debe exponer CaosApp()
+import 'firebase_options.dart';
+import 'app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // Configuramos el proveedor de Google (usa el client_id Web)
-  FirebaseUIAuth.configureProviders([
-    GoogleProvider(
-      clientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: ''),
-    ),
-  ]);
-
-  runApp(const _Root());
+  runApp(const CaosRoot());
 }
 
-class _Root extends StatelessWidget {
-  const _Root({super.key});
+class CaosRoot extends StatelessWidget {
+  const CaosRoot({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,31 +24,44 @@ class _Root extends StatelessWidget {
       title: 'CaosBox • beta',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorSchemeSeed: Colors.deepPurple,
-        brightness: Brightness.dark,
         useMaterial3: true,
+        colorSchemeSeed: Colors.indigo,
+        brightness: Brightness.dark,
       ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (ctx, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          final user = snap.data;
-          if (user == null) {
-            // Pantalla de login de Firebase UI (muy pocas líneas)
-            return SignInScreen(
-              providers: const [GoogleProvider(clientId: String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: ''))],
-              headerBuilder: (_, __, ___) => const Padding(
-                padding: EdgeInsets.only(top: 48, bottom: 16),
-                child: Center(child: Text('CaosBox • beta', style: TextStyle(fontSize: 22))),
+      home: const AuthGate(),
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.active) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final user = snap.data;
+        if (user == null) {
+          return SignInScreen(
+            providers: [
+              GoogleProvider(
+                clientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID'),
               ),
-            );
-          }
-          // Ya autenticado -> tu app
-          return const CaosApp();
-        },
-      ),
+            ],
+            headerBuilder: (ctx, _, __) => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Text('CaosBox • beta', style: TextStyle(fontSize: 22)),
+            ),
+          );
+        }
+        return const CaosApp(); // tu app real
+      },
     );
   }
 }
