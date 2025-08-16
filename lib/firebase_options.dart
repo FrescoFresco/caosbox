@@ -1,42 +1,40 @@
+// lib/firebase_options.dart
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
-/// Lee --dart-define en build time. OJO: deben ser literales.
-class _Env {
-  // Requeridos
-  static const String apiKey   = String.fromEnvironment('FB_API_KEY');
-  static const String appId    = String.fromEnvironment('FB_APP_ID');
-  static const String projectId= String.fromEnvironment('FB_PROJECT_ID');
-  static const String senderId = String.fromEnvironment('FB_MESSAGING_SENDER_ID');
+const _API_KEY     = String.fromEnvironment('FB_API_KEY', defaultValue: '');
+const _APP_ID      = String.fromEnvironment('FB_APP_ID', defaultValue: '');
+const _PROJECT_ID  = String.fromEnvironment('FB_PROJECT_ID', defaultValue: '');
+const _SENDER_ID   = String.fromEnvironment('FB_MESSAGING_SENDER_ID', defaultValue: '');
+const _AUTH_DOMAIN = String.fromEnvironment('FB_AUTH_DOMAIN', defaultValue: '');
+const _BUCKET      = String.fromEnvironment('FB_STORAGE_BUCKET', defaultValue: '');
+const _MEASURE_ID  = String.fromEnvironment('FB_MEASUREMENT_ID', defaultValue: '');
 
-  // Opcionales (permitimos vacío con defaultValue)
-  static const String authDomain   = String.fromEnvironment('FB_AUTH_DOMAIN', defaultValue: '');
-  static const String storageBucket= String.fromEnvironment('FB_STORAGE_BUCKET', defaultValue: '');
-  static const String measurementId= String.fromEnvironment('FB_MEASUREMENT_ID', defaultValue: '');
-
-  // Google Sign-In (opcional)
-  static const String googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: '');
+void _require(String v, String name) {
+  if (v.isEmpty) {
+    throw FlutterError('Falta definir --dart-define=$name en el build.');
+  }
 }
 
-/// Devuelve FirebaseOptions para Web usando los --dart-define
-FirebaseOptions firebaseWebOptions() {
-  // Validación de mínimos requeridos
-  if (_Env.apiKey.isEmpty)    { throw StateError('Falta dart-define FB_API_KEY'); }
-  if (_Env.appId.isEmpty)     { throw StateError('Falta dart-define FB_APP_ID'); }
-  if (_Env.projectId.isEmpty) { throw StateError('Falta dart-define FB_PROJECT_ID'); }
-  if (_Env.senderId.isEmpty)  { throw StateError('Falta dart-define FB_MESSAGING_SENDER_ID'); }
+class DefaultFirebaseOptions {
+  static FirebaseOptions get currentPlatform {
+    // Validaciones mínimas (todas necesarias para Web)
+    _require(_API_KEY, 'FB_API_KEY');
+    _require(_APP_ID, 'FB_APP_ID');
+    _require(_PROJECT_ID, 'FB_PROJECT_ID');
+    _require(_SENDER_ID, 'FB_MESSAGING_SENDER_ID');
+    _require(_AUTH_DOMAIN, 'FB_AUTH_DOMAIN');
+    _require(_BUCKET, 'FB_STORAGE_BUCKET');
+    // measurementId puede estar vacío si no usas Analytics
 
-  // Opcionales: convertimos '' -> null
-  final String? authDomain    = _Env.authDomain.isEmpty    ? null : _Env.authDomain;
-  final String? storageBucket = _Env.storageBucket.isEmpty ? null : _Env.storageBucket;
-  final String? measurementId = _Env.measurementId.isEmpty ? null : _Env.measurementId;
-
-  return FirebaseOptions(
-    apiKey: _Env.apiKey,
-    appId: _Env.appId,
-    projectId: _Env.projectId,
-    messagingSenderId: _Env.senderId,
-    authDomain: authDomain,
-    storageBucket: storageBucket,
-    measurementId: measurementId,
-  );
+    return FirebaseOptions(
+      apiKey: _API_KEY,
+      appId: _APP_ID,
+      projectId: _PROJECT_ID,
+      messagingSenderId: _SENDER_ID,
+      authDomain: _AUTH_DOMAIN,
+      storageBucket: _BUCKET,
+      measurementId: _MEASURE_ID.isEmpty ? null : _MEASURE_ID,
+    );
+  }
 }
