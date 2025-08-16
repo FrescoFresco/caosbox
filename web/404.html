@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CaosBox • beta</title>
+    <base href="/" />
+    <link rel="manifest" href="manifest.json" />
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) =>
+          regs.forEach((r) => r.unregister())
+        );
+      }
+    </script>
+    <script>
+      window._flutter = window._flutter || {};
+      window._flutter.buildConfig = { renderer: "canvaskit", assetBase: "/" };
+    </script>
+    <style>
+      html,body {height:100%;margin:0;background:#0b0b0b;color:#ddd;}
+      #loading {position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto;}
+    </style>
+  </head>
+  <body>
+    <div id="loading">Cargando CaosBox…</div>
+    <script src="flutter_bootstrap.js" defer></script>
+  </body>
+</html>
