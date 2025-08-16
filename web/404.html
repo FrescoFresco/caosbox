@@ -4,21 +4,18 @@
     <meta charset="UTF-8" />
     <title>CaosBox • beta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- En la 404 usamos base absoluta para que GitHub Pages reencoje la SPA -->
     <base href="/" />
+
     <link rel="icon" type="image/png" href="icons/Icon-192.png" />
-    <script>
-      window._flutter = window._flutter || {};
-      window._flutter.buildConfig = {
-        serviceWorker: null,
-        renderer: "canvaskit",
-        assetBase: "./"
-      };
-    </script>
     <script defer src="flutter.js"></script>
+    <script defer src="flutter_bootstrap.js"></script>
   </head>
   <body>
+    <noscript>Esta app necesita JavaScript.</noscript>
     <script>
-      // Redirigir 404 de Pages a la SPA y arrancar Flutter
+      // Redirige cualquier ruta profunda a la SPA
       (function () {
         const l = window.location;
         if (l.pathname !== "/") {
@@ -27,12 +24,12 @@
           window.history.replaceState(null, "", u.toString());
         }
       })();
-      window.addEventListener("load", async () => {
-        const loader = new FlutterLoader();
-        const engineInitializer = await loader.load({ entrypointUrl: "main.dart.js" });
-        const appRunner = await engineInitializer.initializeEngine();
-        await appRunner.runApp();
-      });
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then(rs => rs.forEach(r => r.unregister()))
+          .catch(() => {});
+      }
     </script>
   </body>
 </html>
