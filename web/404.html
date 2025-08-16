@@ -1,30 +1,38 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CaosBox • beta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <base href="/" />
-    <link rel="manifest" href="manifest.json" />
-    <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((regs) =>
-          regs.forEach((r) => r.unregister())
-        );
-      }
-    </script>
+    <link rel="icon" type="image/png" href="icons/Icon-192.png" />
     <script>
       window._flutter = window._flutter || {};
-      window._flutter.buildConfig = { renderer: "canvaskit", assetBase: "/" };
+      window._flutter.buildConfig = {
+        serviceWorker: null,
+        renderer: "canvaskit",
+        assetBase: "./"
+      };
     </script>
-    <style>
-      html,body {height:100%;margin:0;background:#0b0b0b;color:#ddd;}
-      #loading {position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto;}
-    </style>
+    <script defer src="flutter.js"></script>
   </head>
   <body>
-    <div id="loading">Cargando CaosBox…</div>
-    <script src="flutter_bootstrap.js" defer></script>
+    <script>
+      // Redirigir 404 de Pages a la SPA y arrancar Flutter
+      (function () {
+        const l = window.location;
+        if (l.pathname !== "/") {
+          const u = new URL("/", l.origin);
+          u.searchParams.set("p", l.pathname + l.search + l.hash);
+          window.history.replaceState(null, "", u.toString());
+        }
+      })();
+      window.addEventListener("load", async () => {
+        const loader = new FlutterLoader();
+        const engineInitializer = await loader.load({ entrypointUrl: "main.dart.js" });
+        const appRunner = await engineInitializer.initializeEngine();
+        await appRunner.runApp();
+      });
+    </script>
   </body>
 </html>
