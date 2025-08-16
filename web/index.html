@@ -5,38 +5,25 @@
     <title>CaosBox • beta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Requerido por GitHub Pages para rutas -->
+    <!-- Requerido por flutter build --base-href -->
     <base href="$FLUTTER_BASE_HREF" />
 
-    <!-- Iconos opcionales -->
     <link rel="icon" type="image/png" href="icons/Icon-192.png" />
 
-    <!-- ⚠️ Configuración que exige FlutterLoader.load -->
-    <script>
-      // Debe existir ANTES de cargar flutter.js
-      window._flutter = window._flutter || {};
-      window._flutter.buildConfig = {
-        // sin service worker en Pages
-        serviceWorker: null,
-        // CanvasKit va bien en Pages
-        renderer: "canvaskit",
-        // base de assets (build/web/)
-        assetBase: "./"
-      };
-    </script>
-
-    <!-- Cargar runtime de Flutter -->
+    <!-- Deja que Flutter haga el arranque con su bootstrap -->
     <script defer src="flutter.js"></script>
+    <script defer src="flutter_bootstrap.js"></script>
   </head>
   <body>
+    <noscript>Esta app necesita JavaScript.</noscript>
     <script>
-      // Inicialización recomendada (API nueva)
-      window.addEventListener("load", async () => {
-        const loader = new FlutterLoader();
-        const engineInitializer = await loader.load({ entrypointUrl: "main.dart.js" });
-        const appRunner = await engineInitializer.initializeEngine();
-        await appRunner.runApp();
-      });
+      // (opcional) Si alguna vez desplegaste con service worker,
+      // esto lo desactiva para evitar pantallas grises por SW viejo.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations()
+          .then(rs => rs.forEach(r => r.unregister()))
+          .catch(() => {});
+      }
     </script>
   </body>
 </html>
