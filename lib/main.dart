@@ -1,12 +1,10 @@
-import 'dart:html' as html show window;
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
 
-// UI lista en una línea con Google Sign-In
+// UI lista con botón de Google
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
 import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
 
@@ -17,7 +15,7 @@ void main() async {
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
 
-    // Proveedor Google (usa tu clientId web)
+    // Configurar proveedor Google
     final google = GoogleProvider(
       clientId:
           '1087718443702-n9856kennjfbunkb0hc26gntrljhnsrs.apps.googleusercontent.com',
@@ -27,7 +25,6 @@ void main() async {
     runApp(const CaosApp());
     return;
   } catch (e, st) {
-    // Si Firebase no arranca, pinto el error en pantalla
     debugPrint('Fallo Firebase init: $e\n$st');
     visibleError = '$e';
   }
@@ -70,9 +67,9 @@ class _Gate extends StatelessWidget {
       builder: (_, snap) {
         final user = snap.data;
         if (user == null) {
-          // Pantalla de login mínima con el botón de Google
           return SignInScreen(
-            providers: const [
+            // 👇 ¡Sin const aquí!
+            providers: [
               GoogleProvider(
                 clientId:
                     '1087718443702-n9856kennjfbunkb0hc26gntrljhnsrs.apps.googleusercontent.com',
@@ -88,7 +85,6 @@ class _Gate extends StatelessWidget {
             ),
           );
         }
-        // Aquí pon tu Home real; de momento, un OK básico
         return Scaffold(
           appBar: AppBar(
             title: const Text('CaosBox • beta'),
