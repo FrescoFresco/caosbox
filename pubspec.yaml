@@ -3,18 +3,19 @@ description: CaosBox • beta
 publish_to: "none"
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
-  # Firebase core + auth
-  firebase_core: ^3.8.1
-  firebase_auth: ^5.3.1
+  # Firebase (versiones compatibles entre sí)
+  firebase_core: ^3.7.0
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.6.0
 
-  # UI mínima lista para usar
+  # UI de login lista para usar con Google
   firebase_ui_auth: ^2.0.0
   firebase_ui_oauth_google: ^1.4.3
 
