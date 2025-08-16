@@ -10,6 +10,14 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.4
+  # UI oficial de login Google (web)
+  firebase_ui_auth: ^1.15.0
+  firebase_ui_oauth_google: ^1.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
