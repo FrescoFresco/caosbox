@@ -2,28 +2,41 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <title>CaosBox • beta</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CaosBox • beta</title>
 
-    <!-- Requerido por flutter build --base-href -->
+    <!-- Necesario para GitHub Pages / Flutter Web -->
     <base href="$FLUTTER_BASE_HREF" />
+    <meta name="flutter:base-url" content="$FLUTTER_BASE_HREF" />
 
-    <link rel="icon" type="image/png" href="icons/Icon-192.png" />
-
-    <!-- Deja que Flutter haga el arranque con su bootstrap -->
+    <link rel="icon" href="icons/Icon-192.png" />
     <script defer src="flutter.js"></script>
-    <script defer src="flutter_bootstrap.js"></script>
+    <style>
+      html, body { height: 100%; }
+      body { margin: 0; background: #ffffff; }
+      #bootmsg { font: 14px system-ui, -apple-system, Segoe UI, Roboto; color:#555; padding:24px }
+    </style>
   </head>
   <body>
-    <noscript>Esta app necesita JavaScript.</noscript>
+    <div id="bootmsg">Cargando CaosBox…</div>
     <script>
-      // (opcional) Si alguna vez desplegaste con service worker,
-      // esto lo desactiva para evitar pantallas grises por SW viejo.
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations()
-          .then(rs => rs.forEach(r => r.unregister()))
-          .catch(() => {});
-      }
+      window.addEventListener('load', async () => {
+        try {
+          // Desactiva Service Worker para evitar cachés viejas
+          window.flutterConfiguration = { serviceWorker: { serviceWorkerVersion: null } };
+
+          const loader = new FlutterLoader();
+          const engineInitializer = await loader.load({ entrypointUrl: "main.dart.js" });
+          const appRunner = await engineInitializer.initializeEngine();
+          await appRunner.runApp();
+          document.getElementById('bootmsg')?.remove();
+        } catch (e) {
+          console.error('Error arrancando Flutter:', e);
+          const el = document.getElementById('bootmsg');
+          if (el) el.innerHTML =
+            '<b>Error arrancando la app</b><br/>Detalles:<br/><pre style="white-space:pre-wrap">'+ (e && (e.stack||e)) +'</pre>';
+        }
+      });
     </script>
   </body>
 </html>
