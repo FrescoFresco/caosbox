@@ -1,50 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-    />
     <title>CaosBox • beta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- IMPORTANTE para GitHub Pages con dominio propio (raíz) -->
-    <base href="/" />
+    <!-- Requerido por GitHub Pages para rutas -->
+    <base href="$FLUTTER_BASE_HREF" />
 
-    <!-- (Opcional) manifest; no registramos SW -->
-    <link rel="manifest" href="manifest.json" />
+    <!-- Iconos opcionales -->
+    <link rel="icon" type="image/png" href="icons/Icon-192.png" />
 
-    <!-- Limpia cualquier service worker viejo de builds anteriores -->
+    <!-- ⚠️ Configuración que exige FlutterLoader.load -->
     <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((regs) =>
-          regs.forEach((r) => r.unregister())
-        );
-      }
-    </script>
-
-    <!-- Config requerido por Flutter 3.32: evita "FlutterLoader.load requires _flutter.buildConfig..." -->
-    <script>
+      // Debe existir ANTES de cargar flutter.js
       window._flutter = window._flutter || {};
       window._flutter.buildConfig = {
-        renderer: "canvaskit",   // o "html" si prefieres
-        assetBase: "/"           // sirve assets desde la raíz del dominio
+        // sin service worker en Pages
+        serviceWorker: null,
+        // CanvasKit va bien en Pages
+        renderer: "canvaskit",
+        // base de assets (build/web/)
+        assetBase: "./"
       };
     </script>
 
-    <style>
-      html,body {height:100%;margin:0;background:#0b0b0b;color:#ddd;}
-      #loading {
-        position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto; letter-spacing:.2px;
-      }
-    </style>
+    <!-- Cargar runtime de Flutter -->
+    <script defer src="flutter.js"></script>
   </head>
   <body>
-    <noscript>Necesitas habilitar JavaScript para usar esta aplicación.</noscript>
-    <div id="loading">Cargando CaosBox…</div>
-
-    <!-- Script de arranque de Flutter (no cambies el nombre) -->
-    <script src="flutter_bootstrap.js" defer></script>
+    <script>
+      // Inicialización recomendada (API nueva)
+      window.addEventListener("load", async () => {
+        const loader = new FlutterLoader();
+        const engineInitializer = await loader.load({ entrypointUrl: "main.dart.js" });
+        const appRunner = await engineInitializer.initializeEngine();
+        await appRunner.runApp();
+      });
+    </script>
   </body>
 </html>
