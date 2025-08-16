@@ -1,38 +1,50 @@
-name: Build & Deploy Web
-on:
-  push:
-    branches: [ main ]
+env:
+  FIREBASE_JSON: ${{ secrets.FIREBASE_JSON }}
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+steps:
+  - uses: actions/checkout@v4
+  - uses: subosito/flutter-action@v2
+    with:
+      flutter-version: '3.32.8'
 
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.32.8'
+  - name: Ensure jq (for JSON parsing)
+    run: |
+      if ! command -v jq >/dev/null 2>&1; then
+        sudo apt-get update -y
+        sudo apt-get install -y jq
+      fi
+      jq --version
 
-      - name: Pub get
-        run: flutter pub get
+  - name: Load Firebase defines from JSON
+    run: |
+      echo "$FIREBASE_JSON" > firebase.json
+      echo "FB_API_KEY=$(jq -r .apiKey firebase.json)" >> $GITHUB_ENV
+      echo "FB_APP_ID=$(jq -r .appId firebase.json)" >> $GITHUB_ENV
+      echo "FB_PROJECT_ID=$(jq -r .projectId firebase.json)" >> $GITHUB_ENV
+      echo "FB_MESSAGING_SENDER_ID=$(jq -r .messagingSenderId firebase.json)" >> $GITHUB_ENV
+      echo "FB_AUTH_DOMAIN=$(jq -r .authDomain firebase.json)" >> $GITHUB_ENV
+      echo "FB_STORAGE_BUCKET=$(jq -r .storageBucket firebase.json)" >> $GITHUB_ENV
+      echo "FB_MEASUREMENT_ID=$(jq -r .measurementId firebase.json)" >> $GITHUB_ENV
+      echo "GOOGLE_WEB_CLIENT_ID=$(jq -r .googleWebClientId firebase.json)" >> $GITHUB_ENV
 
-      - name: Build Flutter Web
-        run: >
-          flutter build web --release --base-href=/
-          --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }}
-          --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }}
-          --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }}
-          --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }}
-          --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }}
-          --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }}
-          --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+  - name: flutter pub get
+    run: flutter pub get
 
-      - name: Add CNAME
-        run: echo "caosbox.com" > build/web/CNAME
+  - name: Build Flutter Web
+    run: |
+      flutter build web --release --base-href=/ \
+        --dart-define=FB_API_KEY="$FB_API_KEY" \
+        --dart-define=FB_APP_ID="$FB_APP_ID" \
+        --dart-define=FB_PROJECT_ID="$FB_PROJECT_ID" \
+        --dart-define=FB_MESSAGING_SENDER_ID="$FB_MESSAGING_SENDER_ID" \
+        --dart-define=FB_AUTH_DOMAIN="$FB_AUTH_DOMAIN" \
+        --dart-define=FB_STORAGE_BUCKET="$FB_STORAGE_BUCKET" \
+        --dart-define=FB_MEASUREMENT_ID="$FB_MEASUREMENT_ID" \
+        --dart-define=GOOGLE_WEB_CLIENT_ID="$GOOGLE_WEB_CLIENT_ID"
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/web
-          force_orphan: true
+  - name: Deploy to GitHub Pages
+    uses: peaceiris/actions-gh-pages@v4
+    with:
+      github_token: ${{ secrets.GITHUB_TOKEN }}
+      publish_dir: build/web
+      cname: caosbox.com
