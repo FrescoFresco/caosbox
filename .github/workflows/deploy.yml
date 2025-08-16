@@ -1,51 +1,38 @@
-name: Deploy Flutter Web to GitHub Pages
-
+name: Build & Deploy Web
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          channel: stable
           flutter-version: '3.32.8'
 
-      - name: Flutter Pub Get
+      - name: Pub get
         run: flutter pub get
 
-      - name: Build web
-        run: flutter build web --release --base-href=/
+      - name: Build Flutter Web
+        run: >
+          flutter build web --release --base-href=/
+          --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }}
+          --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }}
+          --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }}
+          --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }}
+          --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }}
+          --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }}
+          --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Add CNAME and .nojekyll
-        run: |
-          echo "caosbox.com" > build/web/CNAME
-          touch build/web/.nojekyll
-
-      - name: Make SPA fallback 404 (copy index.html)
-        run: cp build/web/index.html build/web/404.html
+      - name: Add CNAME
+        run: echo "caosbox.com" > build/web/CNAME
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
-          cname: caosbox.com
-          user_name: github-actions[bot]
-          user_email: github-actions[bot]@users.noreply.github.com
+          force_orphan: true
