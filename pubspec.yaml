@@ -10,11 +10,14 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
-  # Firebase core + auth + UI Google
-  firebase_core: ^2.27.0
-  firebase_auth: ^4.17.8
-  firebase_ui_auth: ^1.12.1
-  firebase_ui_oauth_google: ^1.4.2
+  # Firebase (versiones compatibles entre sí)
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.4.4
+
+  # UI de autenticación + OAuth Google (compatibles con auth 5.x)
+  firebase_ui_auth: ^1.15.0
+  firebase_ui_oauth_google: ^1.4.3
 
 dev_dependencies:
   flutter_test:
