@@ -1,33 +1,33 @@
+<!-- web/index.html -->
 <!DOCTYPE html>
-<html lang="es">
+<html>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+      name="viewport"
+    />
     <title>CaosBox • beta</title>
+    <base href="$FLUTTER_BASE_HREF">
 
-    <!-- Necesario para GitHub Pages -->
-    <base href="$FLUTTER_BASE_HREF" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
 
-    <!-- Renderer -->
-    <meta name="flutter-web-renderer" content="canvaskit" />
-    <meta name="flutter-web-auto-detect" content="false" />
-
-    <!-- Cargar runtime + bootstrap (define _flutter.buildConfig) -->
     <script src="flutter.js" defer></script>
-    <script src="flutter_bootstrap.js" defer></script>
   </head>
   <body>
-    <script defer>
-      window.addEventListener('load', async () => {
-        const loader = window._flutter?.loader;
-        const cfg = window._flutter?.buildConfig;
-        if (!loader || !cfg) {
-          document.body.textContent = 'Error arrancando la app (bootstrap no disponible).';
-          return;
-        }
-        // Dejar que registre el SW por defecto (offline ok)
-        const engine = await loader.load();
-        await engine.runApp();
+    <div id="loading" style="font:16px system-ui; padding:24px">Cargando…</div>
+    <script>
+      window.addEventListener('load', function() {
+        const loader = new FlutterLoader();
+        loader.loadEntrypoint({
+          onEntrypointLoaded: function(engineInitializer) {
+            engineInitializer.initializeEngine().then(function(appRunner) {
+              document.getElementById('loading')?.remove();
+              appRunner.runApp();
+            });
+          }
+        });
       });
     </script>
   </body>
