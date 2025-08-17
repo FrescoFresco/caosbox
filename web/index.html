@@ -1,47 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- IMPORTANTE para GitHub Pages / base-href del build -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <title>CaosBox • beta</title>
+  <meta name="description" content="CaosBox — beta" />
+
+  <!-- Evita cachés agresivas mientras depuramos -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <!-- El loader oficial de Flutter -->
+  <script src="flutter.js" defer></script>
+
+  <style>
+    html, body { height: 100%; }
+    body { margin: 0; background: #ffffff; }
+    /* Panel de diagnóstico en pantalla */
+    #diag {
+      position: fixed; inset: 0; z-index: 99999;
+      display: none; overflow: auto;
+      background: #111; color: #0f0; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace;
+      padding: 12px;
+    }
+  </style>
+</head>
 <body>
   <noscript>Esta app requiere JavaScript.</noscript>
-  <pre id="diag" style="position:fixed;inset:0;z-index:99999;background:#111;color:#0f0;padding:12px;display:none;overflow:auto"></pre>
+  <pre id="diag"></pre>
 
-  <script src="flutter.js" defer></script>
   <script>
-    const $d = document.getElementById('diag');
-    function show(msg, err, stack){
-      $d.style.display='block';
-      const t = [
-        '=== CAOSBOX DIAG ===',
-        new Date().toISOString(),
-        msg || '',
-        err ? (err.stack || String(err)) : '',
-        stack || '',
-        'flutter.js loaded? ' + !!document.querySelector('script[src*="flutter.js"]'),
-        'FlutterLoader in window? ' + ('FlutterLoader' in window),
-      ].join('\n');
-      console.error(t);
-      $d.textContent = t;
-    }
+    (function () {
+      const diag = document.getElementById('diag');
 
-    window.addEventListener('error',  e => show('window.onerror', e.error || e.message, e.filename+':'+e.lineno+':'+e.colno));
-    window.addEventListener('unhandledrejection', e => show('unhandledrejection', e.reason));
-
-    window.addEventListener('load', () => {
-      // Limpia SW viejos (pantalla en blanco típica)
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+      function showDiag(title, err, extra){
+        const lines = [
+          '=== CAOSBOX DIAG ===',
+          new Date().toISOString(),
+          'TÍTULO: ' + title,
+          'MENSAJE: ' + (err && (err.stack || err.message) || String(err || '')),
+          (extra || ''),
+          'flutter.js presente? ' + !!document.querySelector('script[src*="flutter.js"]'),
+          'window._flutter? ' + ('_flutter' in window),
+          'window.FlutterLoader? ' + ('FlutterLoader' in window),
+          ''
+        ];
+        const text = lines.join('\n');
+        console.error(text);
+        diag.textContent = text;
+        diag.style.display = 'block';
       }
 
-      try {
-        if (!('FlutterLoader' in window)) {
-          return show('FlutterLoader no está definido. ¿Cargó flutter.js?', null);
-        }
-        const loader = new FlutterLoader();
-        loader.loadEntrypoint({
-          onEntrypointLoaded: (engineInitializer) => {
-            engineInitializer.initializeEngine().then((appRunner) => appRunner.runApp());
+      // Captura errores globales (antes incluso de Flutter)
+      window.addEventListener('error', (e) => showDiag('window.onerror', e.error || e.message, (e.filename||'')+':'+(e.lineno||'')+':'+(e.colno||'')));
+      window.addEventListener('unhandledrejection', (e) => showDiag('unhandledrejection', e.reason));
+
+      // Desregistrar SW antiguos (si antes se publicó con PWA)
+      async function nukeServiceWorkers() {
+        try {
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const r of regs) { await r.unregister().catch(()=>{}); }
+            if (window.caches && caches.keys) {
+              const keys = await caches.keys();
+              for (const k of keys) { if (k.startsWith('flutter-') || k.includes('app-cache')) await caches.delete(k).catch(()=>{}); }
+            }
           }
-        });
-      } catch (e) {
-        show('Error arrancando Flutter', e);
+        } catch {}
       }
-    });
+
+      function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+      window.addEventListener('load', async () => {
+        try {
+          await nukeServiceWorkers();
+
+          // Espera a que flutter.js defina el loader
+          let ready = false;
+          for (let i=0; i<50; i++) {
+            if (('_flutter' in window) || ('FlutterLoader' in window)) { ready = true; break; }
+            await sleep(100);
+          }
+          if (!ready) {
+            return showDiag('flutter.js no cargó o no expuso el loader', 'FlutterLoader/_flutter no encontrados');
+          }
+
+          // Carga la app soportando ambas APIs
+          const swCfg = { serviceWorker: { serviceWorkerVersion: null } };
+
+          if (window._flutter && _flutter.loader && typeof _flutter.loader.loadEntrypoint === 'function') {
+            // API moderna basada en _flutter.loader
+            const engineInitializer = await _flutter.loader.loadEntrypoint(swCfg);
+            const appRunner = await engineInitializer.initializeEngine();
+            await appRunner.runApp();
+            return;
+          }
+
+          if (window.FlutterLoader) {
+            const loader = new FlutterLoader();
+
+            if (typeof loader.load === 'function') {
+              // API nueva (load)
+              const engineInitializer = await loader.load(swCfg);
+              const appRunner = await engineInitializer.initializeEngine();
+              await appRunner.runApp();
+              return;
+            }
+
+            if (typeof loader.loadEntrypoint === 'function') {
+              // API antigua (deprecated, pero compatible)
+              const engineInitializer = await loader.loadEntrypoint(swCfg);
+              const appRunner = await engineInitializer.initializeEngine();
+              await appRunner.runApp();
+              return;
+            }
+          }
+
+          showDiag('No se pudo encontrar método de carga de Flutter', 'Loader incompatible con esta versión');
+        } catch (e) {
+          showDiag('Error arrancando Flutter', e);
+        }
+      });
+    })();
   </script>
 </body>
+</html>
