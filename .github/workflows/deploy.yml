@@ -1,4 +1,4 @@
-name: Build & Deploy (GitHub Pages)
+name: Deploy
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
 jobs:
   web:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,16 +15,16 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
-          # Usa la más reciente estable; si quieres fijar: flutter-version: '3.35.1'
+          flutter-version: '3.35.1'
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
       - name: Build web (no PWA)
         run: |
-          flutter build web --release --base-href=/ --pwa-strategy=none
-          cp build/web/index.html build/web/404.html
+          flutter build web --release \
+            --base-href=/ \
+            --pwa-strategy=none
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
@@ -33,5 +32,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
           publish_branch: gh-pages
-          cname: caosbox.com   # <= ESTO CREA/ACTUALIZA EL CNAME
-
+          cname: caosbox.com
