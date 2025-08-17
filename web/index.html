@@ -1,41 +1,78 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CaosBox • beta</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CaosBox • beta</title>
 
-  <!-- Requerido por Flutter web en GH Pages -->
-  <base href="$FLUTTER_BASE_HREF">
+    <!-- IMPORTANTE para GitHub Pages -->
+    <base href="$FLUTTER_BASE_HREF" />
 
-  <!-- Flutter bootstrap -->
-  <script src="flutter.js" defer></script>
+    <!-- Favicon/manifest si los tienes -->
+    <link rel="icon" href="favicon.png" />
 
-  <style>
-    html, body { height: 100%; background: #f6f4f7; }
-    #splash { display:flex; align-items:center; justify-content:center; height:100%; color:#444; font-family:system-ui,-apple-system,Segoe UI,Roboto; }
-  </style>
-</head>
-<body>
-  <div id="splash">Cargando…</div>
+    <!-- Opcional: usar CanvasKit de Google CDN (más estable) -->
+    <meta name="flutter-web-renderer" content="canvaskit" />
+    <meta name="flutter-web-auto-detect" content="false" />
 
-  <script>
-    // Loader moderno: https://docs.flutter.dev/platform-integration/web/initialization
-    window.addEventListener('load', async () => {
-      try {
-        const loader = new FlutterLoader();
-        const { engineInitializer, appRunner } = await loader.load({
-          entrypointUrl: 'main.dart.js'
+    <!-- Debe ir con defer para que se cargue pero no bloquee -->
+    <script src="flutter.js" defer></script>
+  </head>
+  <body style="background:#f5f2f6;">
+
+    <noscript>
+      <p>Necesitas habilitar JavaScript para usar esta app.</p>
+    </noscript>
+
+    <!-- Boot: SIEMPRE después de incluir flutter.js y con defer -->
+    <script defer>
+      (function () {
+        const diag = new URLSearchParams(location.search).has('diag');
+        const log = (...a) => { if (diag) console.log('[boot]', ...a); };
+        const show = (html) => {
+          if (!diag) return;
+          const pre = document.createElement('pre');
+          pre.style.cssText = 'background:#000;color:#0f0;padding:16px;white-space:pre-wrap;';
+          pre.innerHTML = html;
+          document.body.appendChild(pre);
+        };
+
+        window.addEventListener('error', (e) => {
+          show('== CAOSBOX DIAG ==\n' +
+               new Date().toISOString() + '\n' +
+               'TITULO: ' + (e.message || 'window.onerror') + '\n' +
+               'MENSAJE:\n' + (e.error?.stack || e.message || '(sin stack)'));
         });
-        const engine = await engineInitializer.initializeEngine();
-        document.getElementById('splash')?.remove();
-        await appRunner.runApp();
-      } catch (e) {
-        console.error('Error iniciando Flutter:', e);
-        const el = document.getElementById('splash');
-        if (el) el.textContent = 'Error arrancando la app';
-      }
-    });
-  </script>
-</body>
+
+        window.addEventListener('load', function () {
+          log('window loaded');
+          // Seguridad: no registrar SW (evita cachés viejas)
+          const sw = navigator.serviceWorker;
+          if (sw && sw.getRegistrations) {
+            sw.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+          }
+
+          if (!(window._flutter && _flutter.loader)) {
+            show('flutter.js presente? ' + !!document.querySelector('script[src$="flutter.js"]') +
+                 '\nwindow._flutter? ' + !!window._flutter +
+                 '\nwindow._flutter.loader? ' + !!(window._flutter && _flutter.loader) +
+                 '\n\nERROR: FlutterLoader no está disponible.');
+            return;
+          }
+
+          // API nueva: _flutter.loader.load(...)
+          _flutter.loader.load({
+            entrypointUrl: 'main.dart.js',
+            // Evita PWA/service worker para GH Pages
+            serviceWorker: { strategy: 'none' }
+          }).then((engine) => {
+            log('engine listo, lanzando app');
+            return engine.runApp();
+          }).catch((err) => {
+            show('BOOT ERROR\n' + (err && (err.stack || err)) + '\n');
+          });
+        });
+      })();
+    </script>
+  </body>
 </html>
