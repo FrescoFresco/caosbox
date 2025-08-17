@@ -1,38 +1,45 @@
+// lib/core/models/item.dart
 import 'package:caosbox/core/models/enums.dart';
 
 class Item {
   final String id;
-  final String text;
   final ItemType type;
+  final String text;
   final ItemStatus status;
   final DateTime createdAt;
   final DateTime modifiedAt;
+  final String note;
   final int statusChanges;
 
-  Item(
-    this.id,
-    this.text,
-    this.type, {
+  Item({
+    required this.id,
+    required this.type,
+    required this.text,
     this.status = ItemStatus.normal,
-    DateTime? createdAt,
-    DateTime? modifiedAt,
+    required this.createdAt,
+    required this.modifiedAt,
+    this.note = '',
     this.statusChanges = 0,
-  })  : createdAt = createdAt ?? DateTime.now(),
-        modifiedAt = modifiedAt ?? DateTime.now();
+  });
 
   Item copyWith({
-    ItemStatus? status,
+    String? id,
+    ItemType? type,
     String? text,
+    ItemStatus? status,
+    DateTime? createdAt,
     DateTime? modifiedAt,
+    String? note,
     int? statusChanges,
   }) {
     return Item(
-      id,
-      text ?? this.text,
-      type,
+      id: id ?? this.id,
+      type: type ?? this.type,
+      text: text ?? this.text,
       status: status ?? this.status,
-      createdAt: createdAt,
+      createdAt: createdAt ?? this.createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
+      note: note ?? this.note,
       statusChanges: statusChanges ?? this.statusChanges,
     );
   }
