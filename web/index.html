@@ -5,72 +5,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CaosBox • beta</title>
 
-    <!-- IMPORTANTE para GitHub Pages -->
+    <!-- NECESARIO en GitHub Pages -->
     <base href="$FLUTTER_BASE_HREF" />
 
-    <!-- Favicon/manifest si los tienes -->
-    <link rel="icon" href="favicon.png" />
-
-    <!-- Opcional: usar CanvasKit de Google CDN (más estable) -->
+    <!-- Renderizador web -->
     <meta name="flutter-web-renderer" content="canvaskit" />
     <meta name="flutter-web-auto-detect" content="false" />
 
-    <!-- Debe ir con defer para que se cargue pero no bloquee -->
+    <!-- Flutter runtime -->
     <script src="flutter.js" defer></script>
+
+    <style>
+      html,body{height:100%}
+      body{margin:0;background:#faf6fb;font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial}
+      #diag{position:fixed;inset:16px;border-radius:12px;background:#0b0b0b;color:#a7f3d0;padding:16px;white-space:pre-wrap;overflow:auto;display:none}
+      #diag b{color:#fff}
+    </style>
   </head>
-  <body style="background:#f5f2f6;">
+  <body>
+    <div id="diag"></div>
 
-    <noscript>
-      <p>Necesitas habilitar JavaScript para usar esta app.</p>
-    </noscript>
-
-    <!-- Boot: SIEMPRE después de incluir flutter.js y con defer -->
     <script defer>
       (function () {
-        const diag = new URLSearchParams(location.search).has('diag');
-        const log = (...a) => { if (diag) console.log('[boot]', ...a); };
-        const show = (html) => {
-          if (!diag) return;
-          const pre = document.createElement('pre');
-          pre.style.cssText = 'background:#000;color:#0f0;padding:16px;white-space:pre-wrap;';
-          pre.innerHTML = html;
-          document.body.appendChild(pre);
-        };
+        const qs = new URLSearchParams(location.search);
+        const forceDiag = qs.has('diag');
+        const D = document.getElementById('diag');
+        const show = (s) => { D.style.display='block'; D.textContent += s + '\n'; };
+        const ok = (s) => show('✔ ' + s);
+        const bad = (s) => show('✖ ' + s);
 
+        // Siempre mostramos 1ª línea para saber que index.html llegó a cargarse.
+        show('== CAOSBOX BOOT == ' + new Date().toISOString());
+
+        // Si hay SW viejos, los quitamos (y no registramos ninguno).
+        if (navigator.serviceWorker?.getRegistrations) {
+          navigator.serviceWorker.getRegistrations().then(rs => {
+            if (rs.length) show('Unregister SW: ' + rs.length);
+            rs.forEach(r => r.unregister());
+          });
+        }
+
+        // Captura errores JS y muéstralos en pantalla
         window.addEventListener('error', (e) => {
-          show('== CAOSBOX DIAG ==\n' +
-               new Date().toISOString() + '\n' +
-               'TITULO: ' + (e.message || 'window.onerror') + '\n' +
-               'MENSAJE:\n' + (e.error?.stack || e.message || '(sin stack)'));
+          bad('JS ERROR: ' + (e.message || e.error));
+          if (e.error?.stack) show(String(e.error.stack));
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+          bad('PROMISE REJECTION: ' + (e.reason?.message || e.reason));
+          if (e.reason?.stack) show(String(e.reason.stack));
         });
 
-        window.addEventListener('load', function () {
-          log('window loaded');
-          // Seguridad: no registrar SW (evita cachés viejas)
-          const sw = navigator.serviceWorker;
-          if (sw && sw.getRegistrations) {
-            sw.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-          }
+        async function head(url) {
+          try {
+            const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+            return r.ok;
+          } catch (_) { return false; }
+        }
 
-          if (!(window._flutter && _flutter.loader)) {
-            show('flutter.js presente? ' + !!document.querySelector('script[src$="flutter.js"]') +
-                 '\nwindow._flutter? ' + !!window._flutter +
-                 '\nwindow._flutter.loader? ' + !!(window._flutter && _flutter.loader) +
-                 '\n\nERROR: FlutterLoader no está disponible.');
+        window.addEventListener('load', async () => {
+          // 1) Comprobamos artefactos
+          const hasFlutterJs = !!document.querySelector('script[src$="flutter.js"]');
+          show('flutter.js tag? ' + hasFlutterJs);
+
+          const hasMain = await head('main.dart.js');
+          show('main.dart.js reachable (HEAD)? ' + hasMain);
+
+          // Si no está main.dart.js, no sigas: hay problema de publicación/ruta.
+          if (!hasMain) {
+            bad('main.dart.js NO disponible. Revisa GitHub Pages → branch gh-pages y que build/web tenga el archivo.');
             return;
           }
 
-          // API nueva: _flutter.loader.load(...)
-          _flutter.loader.load({
-            entrypointUrl: 'main.dart.js',
-            // Evita PWA/service worker para GH Pages
-            serviceWorker: { strategy: 'none' }
-          }).then((engine) => {
-            log('engine listo, lanzando app');
-            return engine.runApp();
-          }).catch((err) => {
-            show('BOOT ERROR\n' + (err && (err.stack || err)) + '\n');
-          });
+          // 2) Arranque con la API nueva
+          const loader = window._flutter?.loader;
+          if (!loader) {
+            bad('FlutterLoader NO disponible (window._flutter.loader).');
+            return;
+          }
+          ok('FlutterLoader OK');
+
+          // Mostramos panel de diagnóstico si ?diag=1
+          if (forceDiag) { D.style.display = 'block'; }
+
+          try {
+            const engine = await loader.load({
+              entrypointUrl: 'main.dart.js',
+              serviceWorker: { strategy: 'none' } // sin PWA para evitar caches
+            });
+            ok('Engine cargado, ejecutando app…');
+
+            // Oculta diagnóstico si no se forzó
+            if (!forceDiag) D.style.display = 'none';
+
+            await engine.runApp();
+            ok('runApp() invocado');
+          } catch (err) {
+            bad('BOOT ERROR: ' + (err?.message || err));
+            if (err?.stack) show(String(err.stack));
+          }
         });
       })();
     </script>
