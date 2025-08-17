@@ -1,41 +1,41 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
   <head>
+    <base href="$FLUTTER_BASE_HREF">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CaosBox • beta</title>
-
-    <!-- Necesario para GitHub Pages / Flutter Web -->
-    <base href="$FLUTTER_BASE_HREF" />
-    <meta name="flutter:base-url" content="$FLUTTER_BASE_HREF" />
-
-    <link rel="icon" href="icons/Icon-192.png" />
-    <script defer src="flutter.js"></script>
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="manifest" href="manifest.json" />
+    <!-- Carga el runtime de Flutter -->
+    <script src="flutter.js" defer></script>
     <style>
       html, body { height: 100%; }
       body { margin: 0; background: #ffffff; }
-      #bootmsg { font: 14px system-ui, -apple-system, Segoe UI, Roboto; color:#555; padding:24px }
     </style>
   </head>
   <body>
-    <div id="bootmsg">Cargando CaosBox…</div>
-    <script>
-      window.addEventListener('load', async () => {
-        try {
-          // Desactiva Service Worker para evitar cachés viejas
-          window.flutterConfiguration = { serviceWorker: { serviceWorkerVersion: null } };
+    <noscript>Esta app requiere JavaScript.</noscript>
 
-          const loader = new FlutterLoader();
-          const engineInitializer = await loader.load({ entrypointUrl: "main.dart.js" });
-          const appRunner = await engineInitializer.initializeEngine();
-          await appRunner.runApp();
-          document.getElementById('bootmsg')?.remove();
-        } catch (e) {
-          console.error('Error arrancando Flutter:', e);
-          const el = document.getElementById('bootmsg');
-          if (el) el.innerHTML =
-            '<b>Error arrancando la app</b><br/>Detalles:<br/><pre style="white-space:pre-wrap">'+ (e && (e.stack||e)) +'</pre>';
+    <script>
+      // Carga clásica compatible (evita el error "FlutterLoader is not defined")
+      window.addEventListener('load', function () {
+        // Si quedó un Service Worker viejo, lo eliminamos para evitar pantallas en blanco
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations()
+            .then(rs => rs.forEach(r => r.unregister()))
+            .catch(() => {});
         }
+
+        // flutter.js define "FlutterLoader"
+        const loader = new FlutterLoader();
+        loader.loadEntrypoint({
+          onEntrypointLoaded: function (engineInitializer) {
+            engineInitializer.initializeEngine().then(function (appRunner) {
+              appRunner.runApp();
+            });
+          }
+        });
       });
     </script>
   </body>
