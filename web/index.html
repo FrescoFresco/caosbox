@@ -5,98 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CaosBox • beta</title>
 
-    <!-- GitHub Pages necesita esto -->
+    <!-- Necesario para GitHub Pages -->
     <base href="$FLUTTER_BASE_HREF" />
 
-    <!-- Fuerza renderer consistente -->
+    <!-- Renderer -->
     <meta name="flutter-web-renderer" content="canvaskit" />
     <meta name="flutter-web-auto-detect" content="false" />
 
-    <!-- Runtime de Flutter + bootstrap (define _flutter.buildConfig) -->
+    <!-- Cargar runtime + bootstrap (define _flutter.buildConfig) -->
     <script src="flutter.js" defer></script>
     <script src="flutter_bootstrap.js" defer></script>
-
-    <style>
-      html,body{height:100%}
-      body{margin:0;background:#faf6fb;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
-      #diag{position:fixed;inset:16px;border-radius:12px;background:#0b0b0b;color:#a7f3d0;padding:16px;white-space:pre-wrap;overflow:auto;display:none}
-      #diag b{color:#fff}
-    </style>
   </head>
   <body>
-    <div id="diag"></div>
-
     <script defer>
-      (function () {
-        const qs = new URLSearchParams(location.search);
-        const forceDiag = qs.has('diag');
-        const D = document.getElementById('diag');
-        const show = (s) => { D.style.display='block'; D.textContent += s + '\n'; };
-        const ok = (s) => show('✔ ' + s);
-        const bad = (s) => show('✖ ' + s);
-
-        show('== CAOSBOX BOOT == ' + new Date().toISOString());
-
-        // Desregistrar SW para evitar cachés durante debug
-        if (navigator.serviceWorker?.getRegistrations) {
-          navigator.serviceWorker.getRegistrations().then(rs => {
-            if (rs.length) show('Unregister SW: ' + rs.length);
-            rs.forEach(r => r.unregister());
-          });
+      window.addEventListener('load', async () => {
+        const loader = window._flutter?.loader;
+        const cfg = window._flutter?.buildConfig;
+        if (!loader || !cfg) {
+          document.body.textContent = 'Error arrancando la app (bootstrap no disponible).';
+          return;
         }
-
-        window.addEventListener('error', (e) => {
-          bad('JS ERROR: ' + (e.message || e.error));
-          if (e.error?.stack) show(String(e.error.stack));
-        });
-        window.addEventListener('unhandledrejection', (e) => {
-          bad('PROMISE REJECTION: ' + (e.reason?.message || e.reason));
-          if (e.reason?.stack) show(String(e.reason.stack));
-        });
-
-        async function head(url) {
-          try { const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.ok; }
-          catch (_) { return false; }
-        }
-
-        window.addEventListener('load', async () => {
-          const hasFlutter = !!document.querySelector('script[src$="flutter.js"]');
-          const hasBootstrap = await head('flutter_bootstrap.js');
-          const hasMain = await head('main.dart.js');
-
-          show('flutter.js tag? ' + hasFlutter);
-          show('flutter_bootstrap.js reachable? ' + hasBootstrap);
-          show('main.dart.js reachable? ' + hasMain);
-
-          if (!hasBootstrap) { bad('Falta flutter_bootstrap.js (no se generó o no se publicó).'); return; }
-          if (!hasMain) { bad('Falta main.dart.js. Revisa publicación de build/web.'); return; }
-
-          const loader = window._flutter?.loader;
-          const cfg = window._flutter?.buildConfig;
-          show('window._flutter.loader? ' + !!loader);
-          show('window._flutter.buildConfig? ' + !!cfg);
-
-          if (!loader || !cfg) {
-            bad('FlutterLoader o buildConfig ausentes. Asegura cargar flutter_bootstrap.js.');
-            return;
-          }
-
-          if (forceDiag) D.style.display = 'block';
-
-          try {
-            // Con bootstrap presente, NO pases entrypointUrl aquí; lo toma de buildConfig
-            const engine = await loader.load({
-              serviceWorker: { strategy: 'none' } // sin PWA por ahora
-            });
-            if (!forceDiag) D.style.display = 'none';
-            await engine.runApp();
-            ok('runApp() invocado');
-          } catch (err) {
-            bad('BOOT ERROR: ' + (err?.message || err));
-            if (err?.stack) show(String(err.stack));
-          }
-        });
-      })();
+        // Dejar que registre el SW por defecto (offline ok)
+        const engine = await loader.load();
+        await engine.runApp();
+      });
     </script>
   </body>
 </html>
