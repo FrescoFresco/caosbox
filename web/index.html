@@ -1,42 +1,47 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <base href="$FLUTTER_BASE_HREF">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CaosBox • beta</title>
-    <meta name="theme-color" content="#ffffff" />
-    <link rel="manifest" href="manifest.json" />
-    <!-- Carga el runtime de Flutter -->
-    <script src="flutter.js" defer></script>
-    <style>
-      html, body { height: 100%; }
-      body { margin: 0; background: #ffffff; }
-    </style>
-  </head>
-  <body>
-    <noscript>Esta app requiere JavaScript.</noscript>
+<body>
+  <noscript>Esta app requiere JavaScript.</noscript>
+  <pre id="diag" style="position:fixed;inset:0;z-index:99999;background:#111;color:#0f0;padding:12px;display:none;overflow:auto"></pre>
 
-    <script>
-      // Carga clásica compatible (evita el error "FlutterLoader is not defined")
-      window.addEventListener('load', function () {
-        // Si quedó un Service Worker viejo, lo eliminamos para evitar pantallas en blanco
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations()
-            .then(rs => rs.forEach(r => r.unregister()))
-            .catch(() => {});
+  <script src="flutter.js" defer></script>
+  <script>
+    const $d = document.getElementById('diag');
+    function show(msg, err, stack){
+      $d.style.display='block';
+      const t = [
+        '=== CAOSBOX DIAG ===',
+        new Date().toISOString(),
+        msg || '',
+        err ? (err.stack || String(err)) : '',
+        stack || '',
+        'flutter.js loaded? ' + !!document.querySelector('script[src*="flutter.js"]'),
+        'FlutterLoader in window? ' + ('FlutterLoader' in window),
+      ].join('\n');
+      console.error(t);
+      $d.textContent = t;
+    }
+
+    window.addEventListener('error',  e => show('window.onerror', e.error || e.message, e.filename+':'+e.lineno+':'+e.colno));
+    window.addEventListener('unhandledrejection', e => show('unhandledrejection', e.reason));
+
+    window.addEventListener('load', () => {
+      // Limpia SW viejos (pantalla en blanco típica)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())).catch(()=>{});
+      }
+
+      try {
+        if (!('FlutterLoader' in window)) {
+          return show('FlutterLoader no está definido. ¿Cargó flutter.js?', null);
         }
-
-        // flutter.js define "FlutterLoader"
         const loader = new FlutterLoader();
         loader.loadEntrypoint({
-          onEntrypointLoaded: function (engineInitializer) {
-            engineInitializer.initializeEngine().then(function (appRunner) {
-              appRunner.runApp();
-            });
+          onEntrypointLoaded: (engineInitializer) => {
+            engineInitializer.initializeEngine().then((appRunner) => appRunner.runApp());
           }
         });
-      });
-    </script>
-  </body>
-</html>
+      } catch (e) {
+        show('Error arrancando Flutter', e);
+      }
+    });
+  </script>
+</body>
