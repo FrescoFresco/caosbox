@@ -5,19 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CaosBox • beta</title>
 
-    <!-- NECESARIO en GitHub Pages -->
+    <!-- GitHub Pages necesita esto -->
     <base href="$FLUTTER_BASE_HREF" />
 
-    <!-- Renderizador web -->
+    <!-- Fuerza renderer consistente -->
     <meta name="flutter-web-renderer" content="canvaskit" />
     <meta name="flutter-web-auto-detect" content="false" />
 
-    <!-- Flutter runtime -->
+    <!-- Runtime de Flutter + bootstrap (define _flutter.buildConfig) -->
     <script src="flutter.js" defer></script>
+    <script src="flutter_bootstrap.js" defer></script>
 
     <style>
       html,body{height:100%}
-      body{margin:0;background:#faf6fb;font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial}
+      body{margin:0;background:#faf6fb;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
       #diag{position:fixed;inset:16px;border-radius:12px;background:#0b0b0b;color:#a7f3d0;padding:16px;white-space:pre-wrap;overflow:auto;display:none}
       #diag b{color:#fff}
     </style>
@@ -34,10 +35,9 @@
         const ok = (s) => show('✔ ' + s);
         const bad = (s) => show('✖ ' + s);
 
-        // Siempre mostramos 1ª línea para saber que index.html llegó a cargarse.
         show('== CAOSBOX BOOT == ' + new Date().toISOString());
 
-        // Si hay SW viejos, los quitamos (y no registramos ninguno).
+        // Desregistrar SW para evitar cachés durante debug
         if (navigator.serviceWorker?.getRegistrations) {
           navigator.serviceWorker.getRegistrations().then(rs => {
             if (rs.length) show('Unregister SW: ' + rs.length);
@@ -45,7 +45,6 @@
           });
         }
 
-        // Captura errores JS y muéstralos en pantalla
         window.addEventListener('error', (e) => {
           bad('JS ERROR: ' + (e.message || e.error));
           if (e.error?.stack) show(String(e.error.stack));
@@ -56,47 +55,40 @@
         });
 
         async function head(url) {
-          try {
-            const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-            return r.ok;
-          } catch (_) { return false; }
+          try { const r = await fetch(url, {method:'HEAD', cache:'no-store'}); return r.ok; }
+          catch (_) { return false; }
         }
 
         window.addEventListener('load', async () => {
-          // 1) Comprobamos artefactos
-          const hasFlutterJs = !!document.querySelector('script[src$="flutter.js"]');
-          show('flutter.js tag? ' + hasFlutterJs);
-
+          const hasFlutter = !!document.querySelector('script[src$="flutter.js"]');
+          const hasBootstrap = await head('flutter_bootstrap.js');
           const hasMain = await head('main.dart.js');
-          show('main.dart.js reachable (HEAD)? ' + hasMain);
 
-          // Si no está main.dart.js, no sigas: hay problema de publicación/ruta.
-          if (!hasMain) {
-            bad('main.dart.js NO disponible. Revisa GitHub Pages → branch gh-pages y que build/web tenga el archivo.');
-            return;
-          }
+          show('flutter.js tag? ' + hasFlutter);
+          show('flutter_bootstrap.js reachable? ' + hasBootstrap);
+          show('main.dart.js reachable? ' + hasMain);
 
-          // 2) Arranque con la API nueva
+          if (!hasBootstrap) { bad('Falta flutter_bootstrap.js (no se generó o no se publicó).'); return; }
+          if (!hasMain) { bad('Falta main.dart.js. Revisa publicación de build/web.'); return; }
+
           const loader = window._flutter?.loader;
-          if (!loader) {
-            bad('FlutterLoader NO disponible (window._flutter.loader).');
+          const cfg = window._flutter?.buildConfig;
+          show('window._flutter.loader? ' + !!loader);
+          show('window._flutter.buildConfig? ' + !!cfg);
+
+          if (!loader || !cfg) {
+            bad('FlutterLoader o buildConfig ausentes. Asegura cargar flutter_bootstrap.js.');
             return;
           }
-          ok('FlutterLoader OK');
 
-          // Mostramos panel de diagnóstico si ?diag=1
-          if (forceDiag) { D.style.display = 'block'; }
+          if (forceDiag) D.style.display = 'block';
 
           try {
+            // Con bootstrap presente, NO pases entrypointUrl aquí; lo toma de buildConfig
             const engine = await loader.load({
-              entrypointUrl: 'main.dart.js',
-              serviceWorker: { strategy: 'none' } // sin PWA para evitar caches
+              serviceWorker: { strategy: 'none' } // sin PWA por ahora
             });
-            ok('Engine cargado, ejecutando app…');
-
-            // Oculta diagnóstico si no se forzó
             if (!forceDiag) D.style.display = 'none';
-
             await engine.runApp();
             ok('runApp() invocado');
           } catch (err) {
