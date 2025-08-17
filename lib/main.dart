@@ -1,47 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'firebase_options.dart';
 
-// UI lista con botón de Google
-import 'package:firebase_ui_auth/firebase_ui_auth.dart';
-import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  String? visibleError;
-  try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
-
-    // Configurar proveedor Google
-    final google = GoogleProvider(
-      clientId:
-          '1087718443702-n9856kennjfbunkb0hc26gntrljhnsrs.apps.googleusercontent.com',
-    );
-    FirebaseUIAuth.configureProviders([google]);
-
-    runApp(const CaosApp());
-    return;
-  } catch (e, st) {
-    debugPrint('Fallo Firebase init: $e\n$st');
-    visibleError = '$e';
-  }
-
-  runApp(MaterialApp(
-    home: Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Error iniciando CaosBox:\n$visibleError',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    ),
-  ));
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const CaosApp());
 }
 
 class CaosApp extends StatelessWidget {
@@ -51,14 +18,19 @@ class CaosApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CaosBox • beta',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
-      home: const _Gate(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
+      home: const Gate(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class _Gate extends StatelessWidget {
-  const _Gate();
+/// “Puerta” de la app: o login o home.
+class Gate extends StatelessWidget {
+  const Gate({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -66,41 +38,110 @@ class _Gate extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (_, snap) {
         final user = snap.data;
-        if (user == null) {
-          return SignInScreen(
-            // 👇 ¡Sin const aquí!
-            providers: [
-              GoogleProvider(
-                clientId:
-                    '1087718443702-n9856kennjfbunkb0hc26gntrljhnsrs.apps.googleusercontent.com',
-              ),
-            ],
-            headerBuilder: (_, __, ___) => const Padding(
-              padding: EdgeInsets.only(top: 32.0),
-              child: Text(
-                'CaosBox • beta',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
-              ),
-            ),
-          );
-        }
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('CaosBox • beta'),
-            actions: [
-              IconButton(
-                onPressed: () => FirebaseAuth.instance.signOut(),
-                icon: const Icon(Icons.logout),
-                tooltip: 'Salir',
-              ),
-            ],
-          ),
-          body: Center(
-            child: Text('Hola, ${user.displayName ?? user.email ?? user.uid}!'),
-          ),
-        );
+        if (user == null) return const SignInScreen();
+        return HomeScreen(user: user);
       },
+    );
+  }
+}
+
+class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
+
+  @override
+  State<SignInScreen> createState() => _SignInScreenState();
+}
+
+class _SignInScreenState extends State<SignInScreen> {
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _login() async {
+    setState(() { _busy = true; _error = null; });
+    try {
+      // Web: popup directo sin librerías extra
+      final cred = await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+      final u = cred.user;
+      if (u != null) {
+        // Crea/actualiza perfil mínimo en Firestore
+        final doc = FirebaseFirestore.instance.collection('users').doc(u.uid);
+        await doc.set({
+          'uid': u.uid,
+          'name': u.displayName,
+          'email': u.email,
+          'photo': u.photoURL,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      // Fallback si el popup lo bloquea: redirect
+      try {
+        await FirebaseAuth.instance.signInWithRedirect(GoogleAuthProvider());
+      } catch (e2) {
+        setState(() { _error = '$e'; });
+      }
+    } finally {
+      if (mounted) setState(() { _busy = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('CaosBox • beta', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _busy ? null : _login,
+                icon: const Icon(Icons.login),
+                label: Text(_busy ? 'Entrando...' : 'Entrar con Google'),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key, required this.user});
+  final User user;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('CaosBox • beta'),
+        actions: [
+          IconButton(
+            tooltip: 'Salir',
+            onPressed: () async => FirebaseAuth.instance.signOut(),
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: Center(
+        child: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+          future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+          builder: (_, snap) {
+            final name = user.displayName ?? 'usuario';
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const CircularProgressIndicator();
+            }
+            return Text('Hola, $name!', style: const TextStyle(fontSize: 18));
+          },
+        ),
+      ),
     );
   }
 }
