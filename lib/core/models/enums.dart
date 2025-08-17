@@ -1,10 +1,11 @@
+// lib/core/models/enums.dart
 import 'package:flutter/material.dart';
 
 enum ItemType { idea, action }
 enum ItemStatus { normal, completed, archived }
 
 extension ItemStatusName on ItemStatus {
-  String get name => switch (this) {
+  String get label => switch (this) {
         ItemStatus.normal => 'Normal',
         ItemStatus.completed => 'Completado ✓',
         ItemStatus.archived => 'Archivado 📁',
