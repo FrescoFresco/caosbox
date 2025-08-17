@@ -10,10 +10,14 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
-  # Firebase (mínimo)
-  firebase_core: ^3.5.0
-  firebase_auth: ^5.3.1
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.7.0
   cloud_firestore: ^5.4.4
+
+  # Pantalla de login con Google lista-para-usar
+  firebase_ui_auth: ^2.0.0
+  firebase_ui_oauth_google: ^1.4.3
 
 dev_dependencies:
   flutter_test:
