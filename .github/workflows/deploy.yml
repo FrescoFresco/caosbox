@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Web
 
 on:
   push:
@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  web:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -15,21 +16,33 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          channel: stable
           flutter-version: '3.35.1'
 
-      - name: Flutter pub get
+      - name: Flutter Pub Get
         run: flutter pub get
 
-      - name: Build web (no PWA)
+      - name: Build Flutter Web
         run: |
-          flutter build web --release \
-            --base-href=/ \
-            --pwa-strategy=none
+          flutter build web --release --base-href=/ --pwa-strategy=none \
+            --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }} \
+            --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }} \
+            --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }} \
+            --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }} \
+            --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }} \
+            --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }} \
+            --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }} \
+            --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Add CNAME
+        run: echo "caosbox.com" > build/web/CNAME
+
+      - name: Disable SW 404
+        run: cp web/404.html build/web/404.html || true
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
-          publish_branch: gh-pages
           cname: caosbox.com
