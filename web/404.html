@@ -1,41 +1,34 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-    />
-    <title>CaosBox • beta</title>
-    <base href="$FLUTTER_BASE_HREF">
-    <script src="flutter.js" defer></script>
-    <style>html, body { height: 100%; margin: 0; background: #ffffff; }</style>
-  </head>
-  <body>
-    <noscript>Necesitas habilitar JavaScript para ejecutar esta app.</noscript>
-    <script>
-      window.addEventListener('load', async () => {
-        try {
-          if (!window.__flutter || !window.__flutter.loader) {
-            const pre = document.createElement('pre');
-            pre.style = 'white-space:pre-wrap;color:#0f0;background:#000;padding:16px';
-            pre.textContent =
-              'ERROR: __flutter.loader no está disponible en 404.html.\n' +
-              'Comprueba que 404.html sea idéntico a index.html.';
-            document.body.appendChild(pre);
-            return;
-          }
-          const engineInitializer = await window.__flutter.loader.loadEntrypoint({});
-          const appRunner = await engineInitializer.initializeEngine();
-          await appRunner.runApp();
-        } catch (e) {
-          const pre = document.createElement('pre');
-          pre.style = 'white-space:pre-wrap;color:#0f0;background:#000;padding:16px';
-          pre.textContent = '=== CAOSBOX DIAG (404) ===\n' + new Date().toISOString() + '\n' + (e && e.stack ? e.stack : String(e));
-          document.body.appendChild(pre);
-          throw e;
-        }
-      });
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaosBox • beta</title>
+  <base href="$FLUTTER_BASE_HREF">
+  <script src="flutter.js" defer></script>
+  <style>
+    html, body { height: 100%; background: #f6f4f7; }
+    #splash { display:flex; align-items:center; justify-content:center; height:100%; color:#444; font-family:system-ui,-apple-system,Segoe UI,Roboto; }
+  </style>
+</head>
+<body>
+  <div id="splash">Cargando…</div>
+  <script>
+    window.addEventListener('load', async () => {
+      try {
+        const loader = new FlutterLoader();
+        const { engineInitializer, appRunner } = await loader.load({
+          entrypointUrl: 'main.dart.js'
+        });
+        await engineInitializer.initializeEngine();
+        document.getElementById('splash')?.remove();
+        await appRunner.runApp();
+      } catch (e) {
+        console.error('Error iniciando Flutter:', e);
+        const el = document.getElementById('splash');
+        if (el) el.textContent = 'Error arrancando la app';
+      }
+    });
+  </script>
+</body>
 </html>
