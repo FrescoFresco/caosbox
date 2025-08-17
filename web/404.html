@@ -9,16 +9,19 @@
     <meta name="flutter-web-auto-detect" content="false" />
     <script src="flutter.js" defer></script>
   </head>
-  <body style="background:#f5f2f6;">
+  <body>
     <script defer>
       window.addEventListener('load', function () {
         if (navigator.serviceWorker?.getRegistrations) {
           navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
         }
-        _flutter.loader.load({
+        const loader = window._flutter?.loader;
+        if (!loader) { document.body.textContent = 'Flutter loader no disponible.'; return; }
+        loader.load({
           entrypointUrl: 'main.dart.js',
           serviceWorker: { strategy: 'none' }
-        }).then((engine) => engine.runApp());
+        }).then(engine => engine.runApp())
+          .catch(err => { document.body.textContent = 'Error: ' + (err?.message || err); });
       });
     </script>
   </body>
