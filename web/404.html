@@ -1,34 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CaosBox • beta</title>
-  <base href="$FLUTTER_BASE_HREF">
-  <script src="flutter.js" defer></script>
-  <style>
-    html, body { height: 100%; background: #f6f4f7; }
-    #splash { display:flex; align-items:center; justify-content:center; height:100%; color:#444; font-family:system-ui,-apple-system,Segoe UI,Roboto; }
-  </style>
-</head>
-<body>
-  <div id="splash">Cargando…</div>
-  <script>
-    window.addEventListener('load', async () => {
-      try {
-        const loader = new FlutterLoader();
-        const { engineInitializer, appRunner } = await loader.load({
-          entrypointUrl: 'main.dart.js'
-        });
-        await engineInitializer.initializeEngine();
-        document.getElementById('splash')?.remove();
-        await appRunner.runApp();
-      } catch (e) {
-        console.error('Error iniciando Flutter:', e);
-        const el = document.getElementById('splash');
-        if (el) el.textContent = 'Error arrancando la app';
-      }
-    });
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CaosBox • beta</title>
+    <base href="$FLUTTER_BASE_HREF" />
+    <meta name="flutter-web-renderer" content="canvaskit" />
+    <meta name="flutter-web-auto-detect" content="false" />
+    <script src="flutter.js" defer></script>
+  </head>
+  <body style="background:#f5f2f6;">
+    <script defer>
+      window.addEventListener('load', function () {
+        if (navigator.serviceWorker?.getRegistrations) {
+          navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+        }
+        _flutter.loader.load({
+          entrypointUrl: 'main.dart.js',
+          serviceWorker: { strategy: 'none' }
+        }).then((engine) => engine.runApp());
+      });
+    </script>
+  </body>
 </html>
