@@ -12,16 +12,12 @@
   </head>
   <body>
     <script defer>
-      window.addEventListener('load', function () {
-        if (navigator.serviceWorker?.getRegistrations) {
-          navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-        }
+      window.addEventListener('load', async () => {
         const loader = window._flutter?.loader;
         const cfg = window._flutter?.buildConfig;
         if (!loader || !cfg) { document.body.textContent = 'Bootstrap no disponible.'; return; }
-        loader.load({ serviceWorker: { strategy: 'none' } })
-          .then(engine => engine.runApp())
-          .catch(err => { document.body.textContent = 'Error: ' + (err?.message || err); });
+        const engine = await loader.load();
+        await engine.runApp();
       });
     </script>
   </body>
