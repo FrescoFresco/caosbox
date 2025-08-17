@@ -8,6 +8,7 @@
     <meta name="flutter-web-renderer" content="canvaskit" />
     <meta name="flutter-web-auto-detect" content="false" />
     <script src="flutter.js" defer></script>
+    <script src="flutter_bootstrap.js" defer></script>
   </head>
   <body>
     <script defer>
@@ -16,11 +17,10 @@
           navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
         }
         const loader = window._flutter?.loader;
-        if (!loader) { document.body.textContent = 'Flutter loader no disponible.'; return; }
-        loader.load({
-          entrypointUrl: 'main.dart.js',
-          serviceWorker: { strategy: 'none' }
-        }).then(engine => engine.runApp())
+        const cfg = window._flutter?.buildConfig;
+        if (!loader || !cfg) { document.body.textContent = 'Bootstrap no disponible.'; return; }
+        loader.load({ serviceWorker: { strategy: 'none' } })
+          .then(engine => engine.runApp())
           .catch(err => { document.body.textContent = 'Error: ' + (err?.message || err); });
       });
     </script>
