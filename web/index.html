@@ -1,66 +1,41 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
-    />
-    <title>CaosBox • beta</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CaosBox • beta</title>
 
-    <!-- IMPORTANTE: placeholder para que flutter lo reemplace en build -->
-    <base href="$FLUTTER_BASE_HREF">
+  <!-- Requerido por Flutter web en GH Pages -->
+  <base href="$FLUTTER_BASE_HREF">
 
-    <!-- No metas service worker ni PWA aquí; lo desactivamos en el build -->
+  <!-- Flutter bootstrap -->
+  <script src="flutter.js" defer></script>
 
-    <!-- Cargador moderno de Flutter -->
-    <script src="flutter.js" defer></script>
+  <style>
+    html, body { height: 100%; background: #f6f4f7; }
+    #splash { display:flex; align-items:center; justify-content:center; height:100%; color:#444; font-family:system-ui,-apple-system,Segoe UI,Roboto; }
+  </style>
+</head>
+<body>
+  <div id="splash">Cargando…</div>
 
-    <style>
-      /* Pantalla de fondo blanca mientras arranca */
-      html, body { height: 100%; margin: 0; background: #ffffff; }
-    </style>
-  </head>
-  <body>
-    <noscript>
-      Necesitas habilitar JavaScript para ejecutar esta app.
-    </noscript>
-
-    <script>
-      // Arranque con el loader moderno
-      window.addEventListener('load', async () => {
-        try {
-          if (!window.__flutter || !window.__flutter.loader) {
-            // Mensaje visible si algo va mal
-            const pre = document.createElement('pre');
-            pre.style = 'white-space:pre-wrap;color:#0f0;background:#000;padding:16px';
-            pre.textContent =
-              'ERROR: __flutter.loader no está disponible.\n' +
-              'Asegúrate de que flutter.js se haya cargado y de NO usar FlutterLoader.* (antiguo).';
-            document.body.appendChild(pre);
-            return;
-          }
-
-          const engineInitializer = await window.__flutter.loader.loadEntrypoint({
-            // Sin service worker (pwa-strategy=none en el build)
-          });
-
-          const appRunner = await engineInitializer.initializeEngine();
-          await appRunner.runApp();
-        } catch (e) {
-          const pre = document.createElement('pre');
-          pre.style = 'white-space:pre-wrap;color:#0f0;background:#000;padding:16px';
-          pre.textContent =
-            '=== CAOSBOX DIAG ===\n' +
-            new Date().toISOString() + '\n' +
-            (e && e.stack ? e.stack : String(e)) + '\n' +
-            'flutter.js presente? ' + !!document.querySelector('script[src$="flutter.js"]') + '\n' +
-            'window.__flutter? ' + !!window.__flutter + '\n';
-          document.body.appendChild(pre);
-          // Re-lanzamos para que lo vea la consola
-          throw e;
-        }
-      });
-    </script>
-  </body>
+  <script>
+    // Loader moderno: https://docs.flutter.dev/platform-integration/web/initialization
+    window.addEventListener('load', async () => {
+      try {
+        const loader = new FlutterLoader();
+        const { engineInitializer, appRunner } = await loader.load({
+          entrypointUrl: 'main.dart.js'
+        });
+        const engine = await engineInitializer.initializeEngine();
+        document.getElementById('splash')?.remove();
+        await appRunner.runApp();
+      } catch (e) {
+        console.error('Error iniciando Flutter:', e);
+        const el = document.getElementById('splash');
+        if (el) el.textContent = 'Error arrancando la app';
+      }
+    });
+  </script>
+</body>
 </html>
