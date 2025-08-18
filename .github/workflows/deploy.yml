@@ -5,47 +5,34 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Flutter SDK
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
-      # 1) Habilitar web en el SDK y en el proyecto (no sobreescribe tus archivos)
-      - name: Enable and prepare Web platform
-        run: |
-          flutter config --enable-web
-          flutter create . --platforms web
-
-      - name: flutter pub get
+      - name: Flutter pub get
         run: flutter pub get
 
-      # 2) Compilar pasando los dart-define desde Secrets
-      - name: Build Flutter Web (no PWA)
-        run: |
-          flutter build web --release --pwa-strategy=none --base-href=/ \
-            --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }} \
-            --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }} \
-            --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }} \
-            --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }} \
-            --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }} \
-            --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }} \
-            --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }} \
-            --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      # ⚠️ IMPORTANTE para Flutter Web + Pages:
+      # Tu index.html debe tener: <base href="$FLUTTER_BASE_HREF">
+      - name: Build Web
+        run: flutter build web --release --pwa-strategy=none --base-href=/
 
-      # 3) 404.html = index.html (GitHub Pages single-page app)
-      - name: Copy 404.html
-        run: cp build/web/index.html build/web/404.html
-
-      # 4) Publicar a gh-pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Deploy to gh-pages (preserve CNAME)
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
+          # Esto crea/actualiza el archivo CNAME en la rama gh-pages
+          cname: caosbox.com
+          keep_files: false
