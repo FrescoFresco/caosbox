@@ -27,17 +27,8 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter doctor
-        run: flutter doctor -v
-
       - name: Enable web platform
         run: flutter config --enable-web
-
-      - name: Ensure web folder (first time safeguards)
-        run: |
-          if [ ! -d "web" ]; then
-            flutter create . --platforms web
-          fi
 
       - name: Pub get
         run: flutter pub get
@@ -48,8 +39,6 @@ jobs:
             --release \
             --pwa-strategy=none \
             --base-href=/ \
-            --source-maps \
-            --no-minify \
             --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }} \
             --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }} \
             --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }} \
@@ -59,11 +48,13 @@ jobs:
             --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }} \
             --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Prepare artifact for Pages
+      - name: Prepare artifact for Pages (with CNAME & 404)
         run: |
           mkdir -p build_to_pages
           cp -R build/web/* build_to_pages/
           echo "caosbox.com" > build_to_pages/CNAME
+          # SPA fallback 404 (útil para Pages)
+          cp build_to_pages/index.html build_to_pages/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
