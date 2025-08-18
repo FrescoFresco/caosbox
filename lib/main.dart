@@ -1,8 +1,9 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fauth;
 
-import 'firebase_options.dart'; // el que ya tienes generado
+import 'firebase_options.dart';
 import 'auth_gate.dart';
 import 'caos_app.dart';
 
@@ -26,11 +27,8 @@ class CaosBoxApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6C63FF)),
         useMaterial3: true,
       ),
-      // 👇 Si no hay sesión, muestra SignInScreen; si hay, entra a tu app
       home: AuthGate(
-        builder: (context, fauth.User user) {
-          return CaosApp(user: user);
-        },
+        builder: (context, fauth.User user) => CaosApp(user: user),
       ),
     );
   }
