@@ -1,0 +1,27 @@
+name: caosbox
+description: CaosBox • MVP Firebase Web
+publish_to: "none"
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Firebase core + servicios que usamos
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.7.0
+  cloud_firestore: ^5.4.4
+
+  # UI de login (Google)
+  firebase_ui_auth: ^2.0.0
+  firebase_ui_oauth_google: ^1.4.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
