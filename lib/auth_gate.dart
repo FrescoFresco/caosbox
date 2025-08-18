@@ -23,9 +23,7 @@ class AuthGate extends StatelessWidget {
         final user = snapshot.data;
         if (user == null) {
           return fui.SignInScreen(
-            providers: [
-              fuig.GoogleProvider(clientId: _googleClientId),
-            ],
+            providers: [fuig.GoogleProvider(clientId: _googleClientId)],
             headerBuilder: (context, constraints, _) => const Padding(
               padding: EdgeInsets.only(top: 48),
               child: _CenteredText('Inicia sesión con Google para continuar'),
