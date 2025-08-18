@@ -1,4 +1,3 @@
-// lib/ui/items_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +6,6 @@ import '../data/item.dart';
 
 class ItemsScreen extends StatefulWidget {
   const ItemsScreen({super.key});
-
   @override
   State<ItemsScreen> createState() => _ItemsScreenState();
 }
@@ -23,17 +21,16 @@ class _ItemsScreenState extends State<ItemsScreen> {
   }
 
   Future<void> _addItemDialog() async {
-    final controller = TextEditingController();
+    final c = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Nuevo item'),
         content: TextField(
-          controller: controller,
+          controller: c,
           autofocus: true,
           decoration: const InputDecoration(hintText: 'Escribe tu nota'),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => Navigator.of(context).pop(true),
+          onSubmitted: (_) => Navigator.pop(context, true),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
@@ -41,22 +38,21 @@ class _ItemsScreenState extends State<ItemsScreen> {
         ],
       ),
     );
-    if (ok == true && controller.text.trim().isNotEmpty) {
-      await repo.addItem(controller.text.trim());
+    if (ok == true && c.text.trim().isNotEmpty) {
+      await repo.addItem(c.text.trim());
     }
   }
 
   Future<void> _editItemDialog(Item item) async {
-    final controller = TextEditingController(text: item.text);
+    final c = TextEditingController(text: item.text);
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Editar item'),
         content: TextField(
-          controller: controller,
+          controller: c,
           autofocus: true,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => Navigator.of(context).pop(true),
+          onSubmitted: (_) => Navigator.pop(context, true),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
@@ -64,8 +60,8 @@ class _ItemsScreenState extends State<ItemsScreen> {
         ],
       ),
     );
-    if (ok == true && controller.text.trim().isNotEmpty) {
-      await repo.updateItem(item.id, controller.text.trim());
+    if (ok == true && c.text.trim().isNotEmpty) {
+      await repo.updateItem(item.id, c.text.trim());
     }
   }
 
@@ -83,9 +79,7 @@ class _ItemsScreenState extends State<ItemsScreen> {
           IconButton(
             tooltip: 'Cerrar sesión',
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
+            onPressed: () async => FirebaseAuth.instance.signOut(),
           ),
         ],
       ),
