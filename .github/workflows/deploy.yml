@@ -1,4 +1,4 @@
-name: Pages build and deployment
+name: pages build and deployment
 
 on:
   push:
@@ -21,14 +21,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
+      - name: Set up Flutter (stable)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.1'
-          channel: 'stable'
+          channel: stable
           cache: true
 
-      - name: Flutter pub get
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Enable web platform
+        run: flutter config --enable-web
+
+      - name: Ensure web folder (first time safeguards)
+        run: |
+          if [ ! -d "web" ]; then
+            flutter create . --platforms web
+          fi
+
+      - name: Pub get
         run: flutter pub get
 
       - name: Build web
@@ -37,7 +48,6 @@ jobs:
             --release \
             --pwa-strategy=none \
             --base-href=/ \
-            --web-renderer=html \
             --source-maps \
             --no-minify \
             --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }} \
@@ -49,10 +59,16 @@ jobs:
             --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }} \
             --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Upload Pages artifact
+      - name: Prepare artifact for Pages
+        run: |
+          mkdir -p build_to_pages
+          cp -R build/web/* build_to_pages/
+          echo "caosbox.com" > build_to_pages/CNAME
+
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: build_to_pages
 
   deploy:
     needs: build
