@@ -1,7 +1,9 @@
 // lib/auth_gate.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
+import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
+
 import 'app_home.dart';
 
 class AuthGate extends StatelessWidget {
@@ -9,10 +11,13 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final providers = [
+    // GoogleProvider está en firebase_ui_oauth_google
+    final List<AuthProvider<AuthListener, AuthCredential>> providers = [
       GoogleProvider(
-        // NO uses const en GoogleProvider; y lee el clientId del --dart-define
-        clientId: const String.fromEnvironment('GOOGLE_WEB_CLIENT_ID', defaultValue: ''),
+        clientId: const String.fromEnvironment(
+          'GOOGLE_WEB_CLIENT_ID',
+          defaultValue: '',
+        ),
       ),
     ];
 
