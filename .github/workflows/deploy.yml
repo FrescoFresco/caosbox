@@ -8,32 +8,42 @@ on:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Flutter SDK
+        uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
 
-      - name: Flutter pub get
+      # 1) Habilitar web en el SDK y en el proyecto (no sobreescribe tus archivos)
+      - name: Enable and prepare Web platform
+        run: |
+          flutter config --enable-web
+          flutter create . --platforms web
+
+      - name: flutter pub get
         run: flutter pub get
 
+      # 2) Compilar pasando los dart-define desde Secrets
       - name: Build Flutter Web (no PWA)
         run: |
-          flutter build web --release --pwa-strategy=none --base-href=/
-        env:
-          FB_API_KEY: ${{ secrets.FB_API_KEY }}
-          FB_APP_ID: ${{ secrets.FB_APP_ID }}
-          FB_PROJECT_ID: ${{ secrets.FB_PROJECT_ID }}
-          FB_MESSAGING_SENDER_ID: ${{ secrets.FB_MESSAGING_SENDER_ID }}
-          FB_AUTH_DOMAIN: ${{ secrets.FB_AUTH_DOMAIN }}
-          FB_STORAGE_BUCKET: ${{ secrets.FB_STORAGE_BUCKET }}
-          FB_MEASUREMENT_ID: ${{ secrets.FB_MEASUREMENT_ID }}
-          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          flutter build web --release --pwa-strategy=none --base-href=/ \
+            --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }} \
+            --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }} \
+            --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }} \
+            --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }} \
+            --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }} \
+            --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }} \
+            --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }} \
+            --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
+      # 3) 404.html = index.html (GitHub Pages single-page app)
       - name: Copy 404.html
         run: cp build/web/index.html build/web/404.html
 
+      # 4) Publicar a gh-pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
