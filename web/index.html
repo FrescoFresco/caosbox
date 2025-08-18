@@ -1,12 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CaosBox • beta</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
     <base href="$FLUTTER_BASE_HREF">
+
+    <title>CaosBox • beta</title>
+    <meta name="description" content="CaosBox web app" />
+    <link rel="icon" type="image/png" href="icons/Icon-192.png" />
+
+    <script>
+      // 1) Limpia SWs y caches antiguos (solo por si quedan restos)
+      (function cleanupSW(){
+        try {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations()
+              .then(regs => regs.forEach(r => r.unregister()))
+              .catch(()=>{});
+          }
+          if (window.caches && caches.keys) {
+            caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+          }
+        } catch (_) {}
+      })();
+
+      // 2) Captura de errores global para evitar pantalla blanca silenciosa
+      (function errorOverlay(){
+        function showOverlay(title, msg){
+          const pre = document.createElement('pre');
+          pre.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:45%;overflow:auto;background:#0e0e0f;color:#a2fba2;padding:14px;margin:0;font-family:Menlo,Consolas,monospace;z-index:99999;border-top:2px solid #333;border-left:2px solid #333";
+          pre.textContent = "== CAOSBOX DIAG ==\n" +
+                            new Date().toISOString() + "\n" +
+                            "TITULO: " + title + "\n\n" +
+                            (msg || "");
+          document.body.appendChild(pre);
+        }
+        window.addEventListener('error', (e) => {
+          showOverlay('window.onerror', (e && e.error && e.error.stack) || (e && e.message) || String(e));
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+          const reason = e && e.reason;
+          showOverlay('unhandledrejection', (reason && reason.stack) || String(reason));
+        });
+      })();
+    </script>
+
+    <script>
+      // CanvasKit (si Flutter lo necesita)
+      window.flutterConfiguration = { canvasKitBaseUrl: "canvaskit/" };
+    </script>
+
+    <script defer src="flutter.js"></script>
   </head>
   <body>
-    <script src="flutter_bootstrap.js" async></script>
+    <noscript>Necesitas habilitar JavaScript para usar esta app.</noscript>
+
+    <script>
+      // Arranque Flutter sin PWA
+      window.addEventListener('load', async () => {
+        try {
+          const engine = await _flutter.loader.loadEntrypoint({
+            serviceWorker: { strategy: 'none' }  // importante para Pages
+          });
+          const appRunner = await engine.initializeEngine();
+          await appRunner.runApp();
+        } catch (e) {
+          const pre = document.createElement('pre');
+          pre.style.cssText = "position:fixed;left:0;right:0;top:0;background:#330;color:#fff;padding:10px;margin:0;z-index:99999";
+          pre.textContent = "BOOT ERROR\n" + (e && e.stack ? e.stack : String(e));
+          document.body.appendChild(pre);
+        }
+      });
+    </script>
   </body>
 </html>
