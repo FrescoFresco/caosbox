@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+    <meta name="description" content="CaosBox • beta">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- IMPORTANTE para GitHub Pages -->
+    <base href="$FLUTTER_BASE_HREF">
+    <title>CaosBox • beta</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/Icon-192.png">
+    <meta name="theme-color" content="#ffffff">
+    <style>
+      html,body { height:100%; margin:0; background:#f6f1f4; color:#222; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue","Noto Sans",sans-serif }
+      #splash { height:100%; display:flex; align-items:center; justify-content:center; opacity:.8 }
+    </style>
+    <script>
+      // Flutter 3.35 recomienda no registrar SW si usas --pwa-strategy=none
+      const serviceWorkerVersion = null;
+    </script>
+    <script src="flutter.js" defer></script>
+  </head>
+  <body>
+    <div id="splash">Cargando CaosBox…</div>
+    <script>
+      // Cargar la app. flutter_bootstrap.js lo genera el build.
+      window.addEventListener('load', function () {
+        _flutter.loader.loadEntrypoint({
+          serviceWorker: { serviceWorkerVersion },
+          onEntrypointLoaded: function (engineInitializer) {
+            engineInitializer.initializeEngine().then(function (appRunner) {
+              document.getElementById('splash')?.remove();
+              appRunner.runApp();
+            });
+          },
+        });
+      });
+    </script>
+  </body>
+</html>
