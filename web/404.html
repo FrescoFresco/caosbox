@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      content="IE=Edge"
+      http-equiv="X-UA-Compatible"
+    />
+    <meta
+      name="description"
+      content="CaosBox • beta"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="$FLUTTER_BASE_HREF" />
+
+    <title>CaosBox • beta</title>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#ffffff" />
+    <script defer src="flutter.js"></script>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #loading {
+        display:flex; align-items:center; justify-content:center;
+        height:100%; font-family: system-ui, -apple-system, Roboto, "Segoe UI", Arial;
+        color:#555;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading">Cargando CaosBox…</div>
+    <script>
+      window.addEventListener('load', function () {
+        // Nuevo loader (_flutter.loader) — evita el error FlutterLoader no definido
+        if (!_flutter || !_flutter.loader) {
+          document.getElementById('loading').innerText = 'Error arrancando la app';
+          return;
+        }
+        _flutter.loader
+          .loadEntrypoint({
+            serviceWorker: { serviceWorkerVersion: null },
+          })
+          .then(function (engineInitializer) {
+            return engineInitializer.initializeEngine();
+          })
+          .then(function (appRunner) {
+            document.getElementById('loading')?.remove();
+            return appRunner.runApp();
+          })
+          .catch(function (e) {
+            console.error(e);
+            document.getElementById('loading').innerText =
+              'Error arrancando la app\nDetalles:\n' + (e && e.message ? e.message : e);
+          });
+      });
+    </script>
+  </body>
+</html>
