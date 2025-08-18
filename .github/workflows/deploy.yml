@@ -1,4 +1,4 @@
-name: Deploy CaosBox to GitHub Pages
+name: Pages build and deployment
 
 on:
   push:
@@ -6,54 +6,61 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.1'
-          channel: stable
-
-      - name: Enable Flutter Web (idempotent)
-        run: flutter config --enable-web
+          channel: 'stable'
+          cache: true
 
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build web (no PWA SW)
-        run: >
-          flutter build web --release --pwa-strategy=none --base-href=/ 
-          --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }}
-          --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }}
-          --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }}
-          --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }}
-          --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }}
-          --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }}
-          --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }}
-          --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
-
-      - name: Add CNAME and 404
+      - name: Build web
         run: |
-          echo "caosbox.com" > build/web/CNAME
-          cp web/404.html build/web/404.html || true
+          flutter build web \
+            --release \
+            --pwa-strategy=none \
+            --base-href=/ \
+            --web-renderer=html \
+            --source-maps \
+            --no-minify \
+            --dart-define=FB_API_KEY=${{ secrets.FB_API_KEY }} \
+            --dart-define=FB_APP_ID=${{ secrets.FB_APP_ID }} \
+            --dart-define=FB_PROJECT_ID=${{ secrets.FB_PROJECT_ID }} \
+            --dart-define=FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }} \
+            --dart-define=FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }} \
+            --dart-define=FB_STORAGE_BUCKET=${{ secrets.FB_STORAGE_BUCKET }} \
+            --dart-define=FB_MEASUREMENT_ID=${{ secrets.FB_MEASUREMENT_ID }} \
+            --dart-define=GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}
 
-      - name: Remove PWA leftovers (force clean)
-        run: |
-          rm -f build/web/flutter_service_worker.js || true
-          rm -f build/web/manifest.json || true
-
-      - name: Deploy to gh-pages (fresh commit)
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/web
-          publish_branch: gh-pages
-          force_orphan: true
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
