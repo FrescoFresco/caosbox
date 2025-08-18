@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      content="IE=Edge"
+      http-equiv="X-UA-Compatible"
+    />
+    <meta
+      name="description"
+      content="CaosBox MVP"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CaosBox</title>
+    <base href="/" />
+
+    <link rel="manifest" href="manifest.json" />
+
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        background: #0f172a; /* slate-900 */
+        color: #e2e8f0;      /* slate-200 */
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
+      }
+      .splash {
+        height: 100%;
+        display: grid;
+        place-items: center;
+      }
+      .card {
+        padding: 24px 28px;
+        border-radius: 14px;
+        background: #111827; /* gray-900 */
+        box-shadow: 0 8px 24px rgba(0,0,0,.35);
+        text-align: center;
+      }
+      .muted { color:#94a3b8; font-size:14px; }
+    </style>
+
+    <script>
+      // Flutter web loader (nuevo API)
+      const flutterLoader = new FlutterLoader();
+      flutterLoader.load({
+        onEntrypointLoaded: async function(engineInitializer) {
+          const appRunner = await engineInitializer.initializeEngine();
+          await appRunner.runApp();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <div class="splash">
+      <div class="card">
+        <h2>CaosBox</h2>
+        <p class="muted">Cargando…</p>
+      </div>
+    </div>
+    <script src="flutter.js" defer></script>
+  </body>
+</html>
