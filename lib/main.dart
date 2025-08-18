@@ -5,17 +5,19 @@ import 'package:firebase_auth/firebase_auth.dart' as fauth;
 
 import 'auth_gate.dart';
 
-// Toma las credenciales desde --dart-define en el build/deploy
 FirebaseOptions _webOptionsFromEnv() {
-  String env(String k) => const String.fromEnvironment(k, defaultValue: '');
+  // ⚠️ Las claves deben ser literales aquí (nada de helper functions)
   return FirebaseOptions(
-    apiKey: env('FB_API_KEY'),
-    appId: env('FB_APP_ID'),
-    projectId: env('FB_PROJECT_ID'),
-    messagingSenderId: env('FB_MESSAGING_SENDER_ID'),
-    authDomain: env('FB_AUTH_DOMAIN'),
-    storageBucket: env('FB_STORAGE_BUCKET'),
-    measurementId: env('FB_MEASUREMENT_ID'),
+    apiKey: const String.fromEnvironment('FB_API_KEY', defaultValue: ''),
+    appId: const String.fromEnvironment('FB_APP_ID', defaultValue: ''),
+    projectId: const String.fromEnvironment('FB_PROJECT_ID', defaultValue: ''),
+    messagingSenderId:
+        const String.fromEnvironment('FB_MESSAGING_SENDER_ID', defaultValue: ''),
+    authDomain: const String.fromEnvironment('FB_AUTH_DOMAIN', defaultValue: ''),
+    storageBucket:
+        const String.fromEnvironment('FB_STORAGE_BUCKET', defaultValue: ''),
+    measurementId:
+        const String.fromEnvironment('FB_MEASUREMENT_ID', defaultValue: ''),
   );
 }
 
@@ -34,11 +36,9 @@ class _Root extends StatelessWidget {
       title: 'CaosBox',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
-      // ⬇️ AQUI usamos AuthGate **con** builder (requerido)
       home: AuthGate(
         builder: (context, fauth.User user) {
-          // Si ya tienes tu widget principal (por ejemplo CaosApp),
-          // puedes reemplazar HomeScreen por CaosApp(user: user).
+          // Cambia por tu widget principal si quieres (ej. CaosApp(user: user))
           return HomeScreen(user: user);
         },
       ),
