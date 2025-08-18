@@ -23,9 +23,7 @@ jobs:
           channel: stable
 
       - name: Enable Flutter Web (idempotent)
-        run: |
-          flutter config --enable-web
-          flutter create . --platforms web --overwrite
+        run: flutter config --enable-web
 
       - name: Flutter pub get
         run: flutter pub get
@@ -47,7 +45,12 @@ jobs:
           echo "caosbox.com" > build/web/CNAME
           cp web/404.html build/web/404.html || true
 
-      - name: Deploy to gh-pages
+      - name: Remove PWA leftovers (force clean)
+        run: |
+          rm -f build/web/flutter_service_worker.js || true
+          rm -f build/web/manifest.json || true
+
+      - name: Deploy to gh-pages (fresh commit)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
