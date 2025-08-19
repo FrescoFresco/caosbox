@@ -1,33 +1,30 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
-
-String _env(String k) => const String.fromEnvironment(k, defaultValue: '');
-
-class OptionsFromEnv {
-  final FirebaseOptions web = FirebaseOptions(
-    apiKey: _env('FB_API_KEY'),
-    appId: _env('FB_APP_ID'),
-    messagingSenderId: _env('FB_MESSAGING_SENDER_ID'),
-    projectId: _env('FB_PROJECT_ID'),
-    authDomain: _env('FB_AUTH_DOMAIN'),
-    storageBucket: _env('FB_STORAGE_BUCKET'),
-    measurementId: _env('FB_MEASUREMENT_ID'),
-  );
-}
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    final o = OptionsFromEnv();
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-      case TargetPlatform.android:
-      case TargetPlatform.fuchsia:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-        return o.web; // (de momento usamos la config web para todo)
-      case TargetPlatform.values:
-        return o.web;
+    if (!kIsWeb) {
+      throw UnsupportedError('DefaultFirebaseOptions solo está configurado para Web.');
     }
+
+    // 👇 Cada clave como literal (requerido por fromEnvironment)
+    const String apiKey              = String.fromEnvironment('FB_API_KEY',              defaultValue: '');
+    const String appId               = String.fromEnvironment('FB_APP_ID',               defaultValue: '');
+    const String projectId           = String.fromEnvironment('FB_PROJECT_ID',           defaultValue: '');
+    const String messagingSenderId   = String.fromEnvironment('FB_MESSAGING_SENDER_ID',  defaultValue: '');
+    const String authDomain          = String.fromEnvironment('FB_AUTH_DOMAIN',          defaultValue: '');
+    const String storageBucket       = String.fromEnvironment('FB_STORAGE_BUCKET',       defaultValue: '');
+    const String measurementId       = String.fromEnvironment('FB_MEASUREMENT_ID',       defaultValue: '');
+
+    // Construimos las opciones (en Web, authDomain / storageBucket / measurementId son opcionales)
+    return FirebaseOptions(
+      apiKey: apiKey,
+      appId: appId,
+      projectId: projectId,
+      messagingSenderId: messagingSenderId.isEmpty ? null : messagingSenderId,
+      authDomain: authDomain.isEmpty ? null : authDomain,
+      storageBucket: storageBucket.isEmpty ? null : storageBucket,
+      measurementId: measurementId.isEmpty ? null : measurementId,
+    );
   }
 }
