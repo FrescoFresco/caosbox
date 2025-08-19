@@ -1,14 +1,17 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+import 'firebase_options.dart';
 import 'auth_gate.dart';
 import 'app.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const Root());
 }
 
@@ -17,17 +20,15 @@ class Root extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
-      useMaterial3: true,
-    );
-
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'CaosBox',
-      theme: theme,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: Colors.blueGrey,
+        useMaterial3: true,
+      ),
       home: AuthGate(
-        builder: (ctx, user) => CaosApp(user: user),
+        builder: (context, user) => CaosApp(user: user),
       ),
     );
   }
