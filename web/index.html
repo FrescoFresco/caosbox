@@ -2,62 +2,55 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <meta
-      content="IE=Edge"
-      http-equiv="X-UA-Compatible"
-    />
-    <meta
-      name="description"
-      content="CaosBox MVP"
-    />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-
+    <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CaosBox</title>
-    <base href="/" />
 
+    <!-- 👇 IMPORTANTE para GitHub Pages (Flutter lo reescribe en build) -->
+    <base href="$FLUTTER_BASE_HREF">
+
+    <!-- Iconos/manifest opcionales (si ya los tienes, deja los tuyos) -->
     <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#ffffff" />
 
-    <style>
-      html, body {
-        height: 100%;
-        margin: 0;
-        background: #0f172a; /* slate-900 */
-        color: #e2e8f0;      /* slate-200 */
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji';
-      }
-      .splash {
-        height: 100%;
-        display: grid;
-        place-items: center;
-      }
-      .card {
-        padding: 24px 28px;
-        border-radius: 14px;
-        background: #111827; /* gray-900 */
-        box-shadow: 0 8px 24px rgba(0,0,0,.35);
-        text-align: center;
-      }
-      .muted { color:#94a3b8; font-size:14px; }
-    </style>
+    <!-- Carga del loader de Flutter -->
+    <script defer src="flutter.js"></script>
 
+    <!-- Evita registrar SW (usamos --pwa-strategy=none) -->
     <script>
-      // Flutter web loader (nuevo API)
-      const flutterLoader = new FlutterLoader();
-      flutterLoader.load({
-        onEntrypointLoaded: async function(engineInitializer) {
-          const appRunner = await engineInitializer.initializeEngine();
-          await appRunner.runApp();
-        }
-      });
+      // En builds PWA Flutter define esto; lo dejamos explícito a null para evitar 404.
+      const serviceWorkerVersion = null;
     </script>
   </head>
   <body>
-    <div class="splash">
-      <div class="card">
-        <h2>CaosBox</h2>
-        <p class="muted">Cargando…</p>
-      </div>
+    <!-- Contenedor de la app -->
+    <div id="loading" style="font: 16px system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px; color:#555;">
+      Cargando…
     </div>
-    <script src="flutter.js" defer></script>
+
+    <script>
+      // Usamos la API clásica (loadEntrypoint) — verás un warning deprecado, pero funciona estable.
+      window.addEventListener('load', function () {
+        if (!window._flutter) {
+          document.body.innerHTML = '<pre>Fallo cargando flutter.js</pre>';
+          return;
+        }
+        window._flutter.loader
+          .loadEntrypoint({
+            onEntrypointLoaded: function (engineInitializer) {
+              engineInitializer.initializeEngine().then(function (appRunner) {
+                document.getElementById('loading')?.remove();
+                appRunner.runApp();
+              });
+            },
+          })
+          .catch((e) => {
+            document.body.innerHTML =
+              '<pre style="white-space:pre-wrap;color:#b00">Error arrancando la app\n\n' +
+              String(e && (e.stack || e.message || e)) +
+              '</pre>';
+          });
+      });
+    </script>
   </body>
 </html>
