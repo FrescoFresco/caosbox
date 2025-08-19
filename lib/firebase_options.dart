@@ -1,8 +1,6 @@
-// lib/firebase_options.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 
-/// Lee valores de --dart-define en build time.
 String _env(String k) => const String.fromEnvironment(k, defaultValue: '');
 
 class OptionsFromEnv {
@@ -27,8 +25,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-        // Si quisieras soportar móviles/escritorio, añade aquí los Options específicos.
-        return o.web;
+        return o.web; // (de momento usamos la config web para todo)
       case TargetPlatform.values:
         return o.web;
     }
