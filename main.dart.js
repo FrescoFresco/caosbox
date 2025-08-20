@@ -7109,7 +7109,7 @@ this.b=b
 this.c=c},
 acc:function acc(){},
 acd:function acd(){},
-aEi(){var s=0,r=A.H(t.H),q=1,p=[],o,n,m,l,k,j,i,h,g,f,e
+aEi(){var s=0,r=A.H(t.H),q=1,p=[],o,n,m,l,k,j,i,h,g,f
 var $async$aEi=A.C(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:if($.a6==null)A.aOd()
 $.a6.toString
@@ -7121,32 +7121,30 @@ case 6:q=1
 s=5
 break
 case 3:q=2
-e=p.pop()
-o=!1
+f=p.pop()
 s=5
 break
 case 2:s=1
 break
-case 5:m=o
-if($.a6==null)A.aOd()
-l=$.a6
+case 5:if($.a6==null)A.aOd()
+m=$.a6
+m.toString
+l=$.aW().gdM().b
+k=t.e8
+if(k.a(l.h(0,0))==null)A.a8(A.aS('The app requested a view, but the platform did not provide one.\nThis is likely because the app called `runApp` to render its root widget, which expects the platform to provide a default view to render into (the "implicit" view).\nHowever, the platform likely has multi-view mode enabled, which does not create this default "implicit" view.\nTry using `runWidget` instead of `runApp` to start your app.\n`runWidget` allows you to provide a `View` widget, without requiring a default view.\nSee: https://flutter.dev/to/web-multiview-runwidget'))
+j=k.a(l.h(0,0))
+j.toString
+i=m.gEd()
+h=m.ch$
+if(h===$){l=k.a(l.h(0,0))
 l.toString
-k=$.aW().gdM().b
-j=t.e8
-if(j.a(k.h(0,0))==null)A.a8(A.aS('The app requested a view, but the platform did not provide one.\nThis is likely because the app called `runApp` to render its root widget, which expects the platform to provide a default view to render into (the "implicit" view).\nHowever, the platform likely has multi-view mode enabled, which does not create this default "implicit" view.\nTry using `runWidget` instead of `runApp` to start your app.\n`runWidget` allows you to provide a `View` widget, without requiring a default view.\nSee: https://flutter.dev/to/web-multiview-runwidget'))
-i=j.a(k.h(0,0))
-i.toString
-h=l.gEd()
-g=l.ch$
-if(g===$){k=j.a(k.h(0,0))
-k.toString
-f=new A.a_I(B.M,k,null,A.aa())
-f.aH()
-f.a8I(null,null,k)
-l.ch$!==$&&A.ak()
-l.ch$=f
-g=f}l.a2E(new A.GC(i,new A.Nd(m,null),h,g,null))
-l.NL()
+g=new A.a_I(B.M,l,null,A.aa())
+g.aH()
+g.a8I(null,null,l)
+m.ch$!==$&&A.ak()
+m.ch$=g
+h=g}m.a2E(new A.GC(j,new A.Nd(o,null),i,h,null))
+m.NL()
 return A.F(null,r)
 case 1:return A.E(p.at(-1),r)}})
 return A.G($async$aEi,r)},
