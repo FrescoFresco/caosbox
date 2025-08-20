@@ -10,13 +10,10 @@
     <meta name="description" content="CaosBox" />
     <title>CaosBox</title>
 
-    <!-- IMPORTANTE para dominio raíz -->
-    <base href="/" />
+    <!-- OJO: placeholder requerido si usas --base-href -->
+    <base href="$FLUTTER_BASE_HREF" />
 
-    <!-- Icono opcional -->
     <link rel="icon" type="image/png" href="icons/Icon-192.png" />
-
-    <!-- Loader moderno de Flutter -->
     <script defer src="flutter.js"></script>
 
     <style>
@@ -37,18 +34,16 @@
     <div id="splash">Cargando…</div>
 
     <script>
-      // No registramos Service Worker. Evita "Cargando…" infinito por cachés antiguas.
+      // No registramos Service Worker.
       window.addEventListener('load', function () {
         const loader = new FlutterLoader();
-        loader.load({
-          entrypointUrl: 'main.dart.js',
-        }).then(function (engineInitializer) {
-          return engineInitializer.initializeEngine();
-        }).then(function (appRunner) {
-          const splash = document.getElementById('splash');
-          if (splash) splash.remove();
-          appRunner.runApp();
-        });
+        loader.load({ entrypointUrl: 'main.dart.js' })
+          .then((init) => init.initializeEngine())
+          .then((run) => {
+            const splash = document.getElementById('splash');
+            if (splash) splash.remove();
+            run.runApp();
+          });
       });
     </script>
   </body>
