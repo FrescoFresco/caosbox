@@ -1,61 +1,45 @@
 // lib/app_shell.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'data/fire_repo.dart';
-import 'ui/screens/ideas_screen.dart';
-import 'ui/screens/actions_screen.dart';
-import 'ui/screens/links_screen.dart';
 
-class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.uid});
-  final String uid;
-
-  @override
-  State<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends State<AppShell> with SingleTickerProviderStateMixin {
-  late final TabController _tabs;
-  late final FireRepo _repo;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabs = TabController(length: 3, vsync: this);
-    _repo = FireRepo(FirebaseFirestore.instance, widget.uid);
-  }
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
+class AppShell extends StatelessWidget {
+  const AppShell({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('CaosBox'),
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: const [
-            Tab(text: 'B1 · Ideas'),
-            Tab(text: 'B2 · Acciones'),
-            Tab(text: 'Enlaces'),
-          ],
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('CaosBox'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'B1', icon: Icon(Icons.lightbulb_outline)),
+              Tab(text: 'B2', icon: Icon(Icons.checklist)),
+              Tab(text: 'Enlaces', icon: Icon(Icons.link)),
+            ],
+          ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: TabBarView(
-          controller: _tabs,
+        body: const TabBarView(
           children: [
-            IdeasScreen(repo: _repo),
-            ActionsScreen(repo: _repo),
-            LinksScreen(repo: _repo),
+            _Placeholder('Bloque B1 (Ideas)'),
+            _Placeholder('Bloque B2 (Acciones)'),
+            _Placeholder('Enlaces'),
           ],
         ),
       ),
     );
   }
 }
+
+class _Placeholder extends StatelessWidget {
+  final String text;
+  const _Placeholder(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(text, style: Theme.of(context).textTheme.headlineSmall),
+    );
+  }
+}
+
