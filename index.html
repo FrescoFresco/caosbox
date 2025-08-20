@@ -1,52 +1,38 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base href="/">
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
 
-    <title>CaosBox</title>
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
 
-    <!-- PWA -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="icon" type="image/png" href="icons/Icon-192.png">
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
 
-    <!-- Versión del service worker (token de Flutter) -->
-    <script>
-      const serviceWorkerVersion = "null";
-    </script>
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/">
 
-    <!-- Loader de Flutter -->
-    <script defer src="flutter.js"></script>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
 
-    <style>
-      html, body { height: 100%; margin: 0; background: #F7F5FA; }
-      #loading {
-        position: absolute; inset: 0; display: grid; place-items: center;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
-        color: #6b6b6b;
-      }
-    </style>
-  </head>
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="caosbox">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <body>
-    <noscript>Esta aplicación requiere JavaScript para funcionar.</noscript>
-    <div id="loading">Cargando…</div>
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
 
-    <script>
-      window.addEventListener('load', async () => {
-        // Nueva forma recomendada (Flutter 3.16+)
-        const appRunner = await window.flutterLoader.load({
-          entrypointUrl: 'main.dart.js',
-          serviceWorker: { serviceWorkerVersion },
-        });
-
-        // Oculta el splash de carga y arranca Flutter.
-        document.getElementById('loading')?.remove();
-        appRunner.runApp();
-      });
-    </script>
-  </body>
+  <title>caosbox</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
 </html>
