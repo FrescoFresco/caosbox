@@ -1,51 +1,50 @@
 // lib/auth_gate.dart
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'app_shell.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+class AuthGate extends StatefulWidget {
+  final Widget Function(User user) builder;
+  const AuthGate({super.key, required this.builder});
 
-  Future<void> _signInWithGoogleWeb() async {
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  Stream<User?> get _auth$ => FirebaseAuth.instance.authStateChanges();
+
+  Future<void> _signInWithGoogle() async {
     final provider = GoogleAuthProvider();
-    await FirebaseAuth.instance.signInWithPopup(provider);
+    try {
+      // Primero intentamos popup (web friendly)
+      await FirebaseAuth.instance.signInWithPopup(provider);
+    } catch (_) {
+      // Fallback a redirect si el popup falla (bloqueo cookies/ventanas, etc.)
+      await FirebaseAuth.instance.signInWithRedirect(provider);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
+      stream: _auth$,
       builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
         final user = snap.data;
         if (user == null) {
           return Scaffold(
             body: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const FlutterLogo(size: 56),
-                        const SizedBox(height: 16),
-                        const Text('Inicia sesión para continuar', style: TextStyle(fontSize: 16)),
-                        const SizedBox(height: 24),
-                        FilledButton.icon(
-                          icon: const Icon(Icons.login),
-                          label: const Text('Continuar con Google'),
-                          onPressed: _signInWithGoogleWeb,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              child: FilledButton.icon(
+                icon: const Icon(Icons.login),
+                label: const Text('Entrar con Google'),
+                onPressed: _signInWithGoogle,
               ),
             ),
           );
         }
-        return AppShell(uid: user.uid);
+        return widget.builder(user);
       },
     );
   }
