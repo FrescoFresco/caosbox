@@ -1,51 +1,54 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base href="$FLUTTER_BASE_HREF">
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="description" content="CaosBox" />
     <title>CaosBox</title>
 
-    <!-- PWA -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffffff">
-    <link rel="icon" type="image/png" href="icons/Icon-192.png">
+    <!-- IMPORTANTE para dominio raíz -->
+    <base href="/" />
 
-    <!-- Versión del service worker (token de Flutter) -->
-    <script>
-      const serviceWorkerVersion = "{{flutter_service_worker_version}}";
-    </script>
+    <!-- Icono opcional -->
+    <link rel="icon" type="image/png" href="icons/Icon-192.png" />
 
-    <!-- Loader de Flutter -->
+    <!-- Loader moderno de Flutter -->
     <script defer src="flutter.js"></script>
 
     <style>
-      html, body { height: 100%; margin: 0; background: #F7F5FA; }
-      #loading {
-        position: absolute; inset: 0; display: grid; place-items: center;
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f7f4ff;
+        color: #333;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
-        color: #6b6b6b;
       }
+      #splash { opacity: .9 }
     </style>
   </head>
-
   <body>
-    <noscript>Esta aplicación requiere JavaScript para funcionar.</noscript>
-    <div id="loading">Cargando…</div>
+    <div id="splash">Cargando…</div>
 
     <script>
-      window.addEventListener('load', async () => {
-        // Nueva forma recomendada (Flutter 3.16+)
-        const appRunner = await window.flutterLoader.load({
+      // No registramos Service Worker. Evita "Cargando…" infinito por cachés antiguas.
+      window.addEventListener('load', function () {
+        const loader = new FlutterLoader();
+        loader.load({
           entrypointUrl: 'main.dart.js',
-          serviceWorker: { serviceWorkerVersion },
+        }).then(function (engineInitializer) {
+          return engineInitializer.initializeEngine();
+        }).then(function (appRunner) {
+          const splash = document.getElementById('splash');
+          if (splash) splash.remove();
+          appRunner.runApp();
         });
-
-        // Oculta el splash de carga y arranca Flutter.
-        document.getElementById('loading')?.remove();
-        appRunner.runApp();
       });
     </script>
   </body>
