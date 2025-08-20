@@ -14,15 +14,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # opcional: fija versión para evitar sorpresas
+          # flutter-version: '3.22.0'
 
-      - run: flutter pub get
-      - run: flutter config --enable-web
-      - run: flutter build web --release --web-renderer canvaskit --base-href /
+      - name: Show Flutter version
+        run: flutter --version
 
-      - uses: peaceiris/actions-gh-pages@v3
+      - name: Enable web (idempotente)
+        run: flutter config --enable-web
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build web (sin --web-renderer)
+        run: flutter build web --release --base-href /
+
+      - name: Deploy to GH Pages (+CNAME)
+        uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/web
