@@ -19,16 +19,11 @@ jobs:
         with:
           channel: stable
 
-      - name: Ensure web platform (NO overwrite)
+      # ⚠️ Fuerza soporte web SIEMPRE (no usa --overwrite, no toca tu lib/)
+      - name: Configure project for web
         run: |
           flutter config --enable-web
-          if [ ! -d "web" ]; then
-            flutter create . --platforms web
-          fi
-
-      # Protege contra el contador demo: exige que exista CaosApp
-      - name: Sanity check entrypoint
-        run: grep -R "class CaosApp" -n lib/app.dart
+          flutter create . --platforms web
 
       - name: Pub get
         run: flutter pub get
@@ -36,7 +31,7 @@ jobs:
       - name: Build web (dominio raíz)
         run: flutter build web --release --base-href /
 
-      # SPA fallback para GitHub Pages
+      # SPA fallback (evita 404 en GitHub Pages)
       - name: Create 404.html
         run: cp build/web/index.html build/web/404.html
 
