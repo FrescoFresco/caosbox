@@ -1,20 +1,45 @@
-name: caosbox
-description: CaosBox • beta
-publish_to: "none"
+name: Deploy Flutter Web to GitHub Pages
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
-environment:
-  sdk: ">=3.9.0 <4.0.0"
+permissions:
+  contents: write
 
-dependencies:
-  flutter:
-    sdk: flutter
-  cupertino_icons: ^1.0.8
-  firebase_core: ^3.6.0
-  firebase_auth: ^5.7.0
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
 
-flutter:
-  uses-material-design: true
+      - name: Flutter version
+        run: flutter --version
+
+      # ⚠️ Fuerza configuración para web (aunque ya exista el proyecto)
+      - name: Configure project for web
+        run: flutter create . --platforms web --overwrite
+
+      - name: Pub get
+        run: flutter pub get
+
+      # Build para dominio raíz caosbox.com
+      - name: Build web
+        run: flutter build web --release --base-href /
+
+      # SPA fallback (evita 404 al refrescar rutas en Pages)
+      - name: Create 404.html
+        run: cp build/web/index.html build/web/404.html
+
+      - name: Deploy to GH Pages (CNAME)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/web
+          publish_branch: gh-pages
+          cname: caosbox.com
