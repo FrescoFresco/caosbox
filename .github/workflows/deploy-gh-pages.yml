@@ -19,12 +19,16 @@ jobs:
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Ensure web platform (NO overwrite)
+        run: |
+          flutter config --enable-web
+          if [ ! -d "web" ]; then
+            flutter create . --platforms web
+          fi
 
-      # Fuerza soporte web (evita "This project is not configured for the web")
-      - name: Configure project for web
-        run: flutter create . --platforms web --overwrite
+      # Protege contra el contador demo: exige que exista CaosApp
+      - name: Sanity check entrypoint
+        run: grep -R "class CaosApp" -n lib/app.dart
 
       - name: Pub get
         run: flutter pub get
