@@ -6,28 +6,11 @@ enum ItemStatus { normal, completed, archived }
 ItemType itemTypeFromString(String s) => s == 'b2' ? ItemType.b2 : ItemType.b1;
 String itemTypeToString(ItemType t) => t == ItemType.b2 ? 'b2' : 'b1';
 
-ItemStatus itemStatusFromString(String s) {
-  switch (s) {
-    case 'completed':
-      return ItemStatus.completed;
-    case 'archived':
-      return ItemStatus.archived;
-    default:
-      return ItemStatus.normal;
-  }
-}
+ItemStatus itemStatusFromString(String s) =>
+    s == 'completed' ? ItemStatus.completed : s == 'archived' ? ItemStatus.archived : ItemStatus.normal;
 
-String itemStatusToString(ItemStatus s) {
-  switch (s) {
-    case ItemStatus.completed:
-      return 'completed';
-    case ItemStatus.archived:
-      return 'archived';
-    case ItemStatus.normal:
-    default:
-      return 'normal';
-  }
-}
+String itemStatusToString(ItemStatus s) =>
+    s == ItemStatus.completed ? 'completed' : s == ItemStatus.archived ? 'archived' : 'normal';
 
 class Item {
   final String id;
@@ -55,29 +38,14 @@ class Item {
   });
 
   Item copyWith({
-    String? id,
-    ItemType? type,
-    String? text,
-    String? note,
-    List<String>? tags,
-    ItemStatus? status,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    DateTime? startAt,
-    DateTime? dueAt,
-  }) =>
-      Item(
-        id: id ?? this.id,
-        type: type ?? this.type,
-        text: text ?? this.text,
-        note: note ?? this.note,
-        tags: tags ?? this.tags,
-        status: status ?? this.status,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-        startAt: startAt ?? this.startAt,
-        dueAt: dueAt ?? this.dueAt,
-      );
+    String? id, ItemType? type, String? text, String? note, List<String>? tags,
+    ItemStatus? status, DateTime? createdAt, DateTime? updatedAt, DateTime? startAt, DateTime? dueAt,
+  }) => Item(
+      id: id ?? this.id, type: type ?? this.type, text: text ?? this.text, note: note ?? this.note,
+      tags: tags ?? this.tags, status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt, updatedAt: updatedAt ?? this.updatedAt,
+      startAt: startAt ?? this.startAt, dueAt: dueAt ?? this.dueAt,
+    );
 
   Map<String, dynamic> toMap() => {
         'type': itemTypeToString(type),
@@ -93,7 +61,7 @@ class Item {
 
   static Item fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final m = d.data()!;
-    DateTime? _ts(dynamic v) => v is Timestamp ? v.toDate() : null;
+    DateTime? ts(v) => v is Timestamp ? v.toDate() : null;
     return Item(
       id: d.id,
       type: itemTypeFromString(m['type'] ?? 'b1'),
@@ -101,10 +69,10 @@ class Item {
       note: (m['note'] ?? '').toString(),
       tags: (m['tags'] is List) ? (m['tags'] as List).cast<String>() : <String>[],
       status: itemStatusFromString((m['status'] ?? 'normal').toString()),
-      createdAt: _ts(m['createdAt']) ?? DateTime.now(),
-      updatedAt: _ts(m['updatedAt']) ?? DateTime.now(),
-      startAt: _ts(m['startAt']),
-      dueAt: _ts(m['dueAt']),
+      createdAt: ts(m['createdAt']) ?? DateTime.now(),
+      updatedAt: ts(m['updatedAt']) ?? DateTime.now(),
+      startAt: ts(m['startAt']),
+      dueAt: ts(m['dueAt']),
     );
   }
 }
