@@ -7,9 +7,12 @@ class FireRepoFirestore implements Repo {
   FirebaseFirestore get _db => FirebaseFirestore.instance;
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
 
-  CollectionReference<Map<String, dynamic>> get _items => _db.collection('users').doc(_uid).collection('items');
-  CollectionReference<Map<String, dynamic>> get _links => _db.collection('users').doc(_uid).collection('links');
-  CollectionReference<Map<String, dynamic>> get _linksOf => _db.collection('users').doc(_uid).collection('linksOf');
+  CollectionReference<Map<String, dynamic>> get _items =>
+      _db.collection('users').doc(_uid).collection('items');
+  CollectionReference<Map<String, dynamic>> get _links =>
+      _db.collection('users').doc(_uid).collection('links');
+  CollectionReference<Map<String, dynamic>> get _linksOf =>
+      _db.collection('users').doc(_uid).collection('linksOf');
 
   @override
   Stream<List<Item>> streamByType(ItemType t) => _items
@@ -19,16 +22,16 @@ class FireRepoFirestore implements Repo {
       .map((s) => s.docs.map(Item.fromDoc).toList());
 
   @override
-  Stream<Item?> streamItem(String id) => _items.doc(id).snapshots().map((d) => d.exists ? Item.fromDoc(d) : null);
+  Stream<Item?> streamItem(String id) =>
+      _items.doc(id).snapshots().map((d) => d.exists ? Item.fromDoc(d) : null);
 
   @override
-  Future<String> addItem(ItemType t, {required String text, String note = '', List<String> tags = const []}) async {
+  Future<String> addItem(ItemType t, {required String text, String note = ''}) async {
     final now = DateTime.now();
     final ref = await _items.add({
       'type': itemTypeToString(t),
       'text': text,
       'note': note,
-      'tags': tags,
       'status': 'normal',
       'createdAt': Timestamp.fromDate(now),
       'updatedAt': Timestamp.fromDate(now),
@@ -82,5 +85,6 @@ class FireRepoFirestore implements Repo {
   }
 
   @override
-  Future<bool> hasLink(String a, String b) async => (await _links.doc(canonicalKey(a, b)).get()).exists;
+  Future<bool> hasLink(String a, String b) async =>
+      (await _links.doc(canonicalKey(a, b)).get()).exists;
 }
