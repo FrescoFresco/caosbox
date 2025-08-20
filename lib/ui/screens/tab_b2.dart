@@ -115,4 +115,23 @@ class TabB2 extends StatelessWidget {
     );
   }
 
-  void _openEdit(BuildContext context, I_
+  void _openEdit(BuildContext context, Item it) {
+    final repo = context.read<Repo>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => AddEditSheet(
+        type: it.type,
+        initialText: it.text,
+        initialNote: it.note,
+        initialTags: it.tags,
+        onSave: (d) async {
+          await repo.updateItem(
+            it.copyWith(text: d.$1, note: d.$2, tags: d.$3),
+          );
+        },
+      ),
+    );
+  }
+}
