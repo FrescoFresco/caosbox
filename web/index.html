@@ -1,50 +1,67 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
-    />
-    <meta name="description" content="CaosBox" />
-    <title>CaosBox</title>
+<head>
+  <meta charset="UTF-8" />
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- OJO: placeholder requerido si usas --base-href -->
-    <base href="$FLUTTER_BASE_HREF" />
+  <title>CaosBox</title>
 
-    <link rel="icon" type="image/png" href="icons/Icon-192.png" />
-    <script defer src="flutter.js"></script>
+  <!-- MUY IMPORTANTE para GitHub Pages: el workflow reemplaza $FLUTTER_BASE_HREF por "/" -->
+  <base href="$FLUTTER_BASE_HREF">
 
-    <style>
-      html, body { height: 100%; }
-      body {
-        margin: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f7f4ff;
-        color: #333;
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+  <!-- Loader de Flutter -->
+  <script defer src="flutter.js"></script>
+
+  <style>
+    html,body { height:100%; margin:0; background:#0b0b0b; color:#eee; font-family:system-ui, sans-serif; }
+    #splash { display:flex; align-items:center; justify-content:center; height:100%; }
+    .spinner { width:48px; height:48px; border:5px solid #444; border-top-color:#0af; border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #errorOverlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.92); color:#f66; display:none;
+      padding:24px; overflow:auto; white-space:pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    #errorOverlay h2 { margin-top:0; color:#ff8080; }
+  </style>
+</head>
+<body>
+  <div id="splash"><div class="spinner" aria-label="Cargando…"></div></div>
+  <div id="errorOverlay">
+    <h2>❌ Error arrancando la app</h2>
+    <div id="errorMsg">Cargando detalles…</div>
+  </div>
+
+  <script>
+    function showError(msg) {
+      const el = document.getElementById('errorOverlay');
+      document.getElementById('errorMsg').textContent = msg instanceof Error ? (msg.stack || msg.message) : String(msg);
+      el.style.display = 'block';
+    }
+
+    // Captura errores JS para no quedarnos en "cargando…"
+    window.addEventListener('error', (e) => showError(e.error || e.message || 'Error'));
+    window.addEventListener('unhandledrejection', (e) => showError(e.reason || 'Promise rejection'));
+
+    // No registramos Service Worker (evita caches viejas mientras depuramos).
+    // Si más adelante quieres PWA, lo activamos de nuevo.
+
+    // Arranque estándar con API "antigua" (estable) para evitar incompatibilidades:
+    window.addEventListener('load', function() {
+      if (!window._flutter || !window._flutter.loader) {
+        showError('Flutter loader no encontrado (¿flutter.js no cargó?)');
+        return;
       }
-      #splash { opacity: .9 }
-    </style>
-  </head>
-  <body>
-    <div id="splash">Cargando…</div>
-
-    <script>
-      // No registramos Service Worker.
-      window.addEventListener('load', function () {
-        const loader = new FlutterLoader();
-        loader.load({ entrypointUrl: 'main.dart.js' })
-          .then((init) => init.initializeEngine())
-          .then((run) => {
-            const splash = document.getElementById('splash');
-            if (splash) splash.remove();
-            run.runApp();
-          });
-      });
-    </script>
-  </body>
+      window._flutter.loader.loadEntrypoint({
+        onEntrypointLoaded: async function(engineInitializer) {
+          try {
+            const appRunner = await engineInitializer.initializeEngine();
+            await appRunner.runApp();
+            document.getElementById('splash')?.remove();
+          } catch (err) { showError(err); }
+        }
+      }).catch(showError);
+    });
+  </script>
+</body>
 </html>
