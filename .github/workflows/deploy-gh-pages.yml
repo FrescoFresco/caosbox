@@ -1,5 +1,4 @@
 name: Deploy Flutter Web to GitHub Pages
-
 on:
   push:
     branches: [ main ]
@@ -18,22 +17,28 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          # opcional: fija versión para evitar sorpresas
-          # flutter-version: '3.22.0'
 
-      - name: Show Flutter version
+      - name: Flutter version
         run: flutter --version
 
-      - name: Enable web (idempotente)
-        run: flutter config --enable-web
+      # Asegura plataforma web (idempotente; no toca tu código Dart)
+      - name: Ensure web platform
+        run: |
+          if [ ! -d "web" ]; then flutter create . --platforms web; fi
 
-      - name: Get packages
+      - name: Pub get
         run: flutter pub get
 
-      - name: Build web (sin --web-renderer)
+      # Build para dominio raíz caosbox.com
+      - name: Build web
         run: flutter build web --release --base-href /
 
-      - name: Deploy to GH Pages (+CNAME)
+      # SPA fallback: evita 404 al refrescar rutas
+      - name: Create 404.html
+        run: cp build/web/index.html build/web/404.html
+
+      # Publica y setea CNAME = caosbox.com
+      - name: Deploy to GH Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
