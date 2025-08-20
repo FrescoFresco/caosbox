@@ -12,7 +12,8 @@ class TabLinks extends StatefulWidget {
   State<TabLinks> createState() => _TabLinksState();
 }
 
-class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin {
+class _TabLinksState extends State<TabLinks>
+    with AutomaticKeepAliveClientMixin {
   String? _leftSel; // id B1 seleccionado
   @override
   bool get wantKeepAlive => true;
@@ -42,7 +43,9 @@ class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin 
                     stream: repo.streamByType(ItemType.b1),
                     builder: (context, snap) {
                       if (!snap.hasData) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
                       }
                       final q = st.qLLeft.toLowerCase();
                       final items = snap.data!
@@ -50,9 +53,11 @@ class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin 
                               e.text.toLowerCase().contains(q) ||
                               e.note.toLowerCase().contains(q))
                           .toList();
+
                       if (items.isEmpty) {
                         return const Center(child: Text('Sin B1'));
                       }
+
                       return ListView.builder(
                         itemCount: items.length,
                         itemBuilder: (c, i) {
@@ -102,7 +107,9 @@ class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin 
                 const SizedBox(height: 8),
                 Expanded(
                   child: _leftSel == null
-                      ? const Center(child: Text('Selecciona un B1 a la izquierda'))
+                      ? const Center(
+                          child: Text('Selecciona un B1 a la izquierda'),
+                        )
                       : StreamBuilder<Set<String>>(
                           stream: repo.streamLinksOf(_leftSel!),
                           builder: (context, linkSnap) {
@@ -111,7 +118,9 @@ class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin 
                               stream: repo.streamByType(ItemType.b2),
                               builder: (context, snap) {
                                 if (!snap.hasData) {
-                                  return const Center(child: CircularProgressIndicator());
+                                  return const Center(
+                                    child: CircularProgressIndicator(),
+                                  );
                                 }
                                 final q = st.qLRight.toLowerCase();
                                 final items = snap.data!
@@ -119,9 +128,11 @@ class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin 
                                         e.text.toLowerCase().contains(q) ||
                                         e.note.toLowerCase().contains(q))
                                     .toList();
+
                                 if (items.isEmpty) {
                                   return const Center(child: Text('Sin B2'));
                                 }
+
                                 return ListView.builder(
                                   itemCount: items.length,
                                   itemBuilder: (c, i) {
@@ -138,3 +149,26 @@ class _TabLinksState extends State<TabLinks> with AutomaticKeepAliveClientMixin 
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       subtitle: it.note.isEmpty
+                                          ? null
+                                          : Text(
+                                              it.note,
+                                              maxLines: 1,
+                                              overflow:
+                                                  TextOverflow.ellipsis,
+                                            ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
