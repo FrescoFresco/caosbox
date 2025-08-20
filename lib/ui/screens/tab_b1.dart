@@ -70,10 +70,12 @@ class TabB1 extends StatelessWidget {
   void _openAdd(BuildContext context) {
     final repo = context.read<Repo>();
     showModalBottomSheet(
-      context: context, isScrollControlled: true, showDragHandle: true,
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => AddEditSheet(
         type: ItemType.b1,
-        onSave: (d) async => repo.addItem(ItemType.b1, text: d.$1, note: d.$2, tags: d.$3),
+        onSave: (d) async => repo.addItem(ItemType.b1, text: d.$1, note: d.$2),
       ),
     );
   }
@@ -81,10 +83,14 @@ class TabB1 extends StatelessWidget {
   void _openEdit(BuildContext context, Item it) {
     final repo = context.read<Repo>();
     showModalBottomSheet(
-      context: context, isScrollControlled: true, showDragHandle: true,
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => AddEditSheet(
-        type: it.type, initialText: it.text, initialNote: it.note, initialTags: it.tags,
-        onSave: (d) async => repo.updateItem(it.copyWith(text: d.$1, note: d.$2, tags: d.$3)),
+        type: it.type,
+        initialText: it.text,
+        initialNote: it.note,
+        onSave: (d) async => repo.updateItem(it.copyWith(text: d.$1, note: d.$2)),
       ),
     );
   }
