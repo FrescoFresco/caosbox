@@ -23,7 +23,6 @@ class InMemoryRepo implements Repo {
         type: ItemType.b1,
         text: 'Idea $i',
         note: 'Nota de la idea $i',
-        tags: ['demo'],
         status: ItemStatus.normal,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -33,7 +32,6 @@ class InMemoryRepo implements Repo {
         type: ItemType.b2,
         text: 'Acción $i',
         note: 'Nota de la acción $i',
-        tags: ['demo'],
         status: i.isEven ? ItemStatus.completed : ItemStatus.normal,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -44,10 +42,7 @@ class InMemoryRepo implements Repo {
     return r;
   }
 
-  void _add(Item it) {
-    _items[it.id] = it;
-    _emit();
-  }
+  void _add(Item it) { _items[it.id] = it; _emit(); }
 
   void _emit() {
     final b1 = _items.values.where((e) => e.type == ItemType.b1).toList()
@@ -71,20 +66,18 @@ class InMemoryRepo implements Repo {
   @override
   Stream<Item?> streamItem(String id) {
     final ctrl = _itemCtrls[id] ??= StreamController<Item?>.broadcast();
-    // emitir valor actual inmediatamente
     Future.microtask(() => ctrl.add(_items[id]));
     return ctrl.stream;
   }
 
   @override
-  Future<String> addItem(ItemType t, {required String text, String note = '', List<String> tags = const []}) async {
+  Future<String> addItem(ItemType t, {required String text, String note = ''}) async {
     final id = '${t == ItemType.b1 ? 'b1' : 'b2'}_${DateTime.now().millisecondsSinceEpoch}';
     _add(Item(
       id: id,
       type: t,
       text: text,
       note: note,
-      tags: tags,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ));
