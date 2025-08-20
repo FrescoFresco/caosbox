@@ -55,8 +55,8 @@ class CaosRoot extends StatelessWidget {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
           if (snap.data == null) {
-            // usa el EmailAuthProvider de firebase_ui_auth (evita conflicto)
-            return SignInScreen(providers: [fui.EmailAuthProvider()]);
+            // Usa las clases de firebase_ui_auth con el alias 'fui'
+            return fui.SignInScreen(providers: [fui.EmailAuthProvider()]);
           }
           final repo = FireRepoFirestore();
           return MultiProvider(
