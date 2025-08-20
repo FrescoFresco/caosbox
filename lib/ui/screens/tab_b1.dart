@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../data/repo.dart';
 import '../../models/item.dart';
 import '../../state/app_state.dart';
-import '../widgets/block_tile.dart';
+import '../widgets/block_card.dart';
 import '../widgets/simple_search_field.dart';
 import '../widgets/add_edit_sheet.dart';
 import '../widgets/longpress_menu.dart';
@@ -31,17 +31,17 @@ class TabB1 extends StatelessWidget {
                   if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                   final q = st.qB1.toLowerCase();
                   final items = snap.data!
-                      .where((e) => e.text.toLowerCase().contains(q) || e.note.toLowerCase().contains(q) || e.tags.any((t) => t.toLowerCase().contains(q)))
+                      .where((e) => e.text.toLowerCase().contains(q) || e.note.toLowerCase().contains(q))
                       .toList();
                   if (items.isEmpty) return const Center(child: Text('Sin elementos'));
                   return ListView.builder(
                     itemCount: items.length,
                     itemBuilder: (c, i) {
                       final it = items[i];
-                      return BlockTile(
+                      return BlockCard(
                         it: it,
-                        onOpen: () => Navigator.push(c, MaterialPageRoute(builder: (_) => BlockDetail(id: it.id))),
-                        onLong: () => showLongpressMenu(
+                        onTap: () => Navigator.push(c, MaterialPageRoute(builder: (_) => BlockDetail(id: it.id))),
+                        onLongPress: () => showLongpressMenu(
                           c, it,
                           onOpen: () => Navigator.push(c, MaterialPageRoute(builder: (_) => BlockDetail(id: it.id))),
                           onEdit: () => _openEdit(c, it),
@@ -70,14 +70,10 @@ class TabB1 extends StatelessWidget {
   void _openAdd(BuildContext context) {
     final repo = context.read<Repo>();
     showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+      context: context, isScrollControlled: true, showDragHandle: true,
       builder: (_) => AddEditSheet(
         type: ItemType.b1,
-        onSave: (data) async {
-          await repo.addItem(ItemType.b1, text: data.$1, note: data.$2, tags: data.$3);
-        },
+        onSave: (d) async => repo.addItem(ItemType.b1, text: d.$1, note: d.$2, tags: d.$3),
       ),
     );
   }
@@ -85,17 +81,10 @@ class TabB1 extends StatelessWidget {
   void _openEdit(BuildContext context, Item it) {
     final repo = context.read<Repo>();
     showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+      context: context, isScrollControlled: true, showDragHandle: true,
       builder: (_) => AddEditSheet(
-        type: it.type,
-        initialText: it.text,
-        initialNote: it.note,
-        initialTags: it.tags,
-        onSave: (data) async {
-          await repo.updateItem(it.copyWith(text: data.$1, note: data.$2, tags: data.$3));
-        },
+        type: it.type, initialText: it.text, initialNote: it.note, initialTags: it.tags,
+        onSave: (d) async => repo.updateItem(it.copyWith(text: d.$1, note: d.$2, tags: d.$3)),
       ),
     );
   }
