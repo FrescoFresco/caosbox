@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'auth_gate.dart';
+import 'app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,9 +18,14 @@ class CaosApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CaosBox',
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
       debugShowCheckedModeBanner: false,
-      home: const AuthGate(),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+        useMaterial3: true,
+      ),
+      home: AuthGate(
+        builder: (user) => const AppShell(), // tu app real tras login
+      ),
     );
   }
 }
